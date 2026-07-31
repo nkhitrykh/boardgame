@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A digital companion for a physical board game.">
+  <title>Board Game Companion</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html">Board Game Companion</a>
+    <nav aria-label="Main navigation">
+      <a href="#objectives">Objectives</a>
+      <a href="#journal">Journal</a>
+      <a href="#audio">Audio</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Your mission continues</p>
+      <h1>A companion for the story at your table.</h1>
+      <p>Make choices, receive objectives, and keep track of discoveries while playing the physical board game.</p>
+      <a class="button button-primary" href="story/story.html">Start story</a>
+    </section>
+
+    <section class="panel" id="objectives">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Mission log</p>
+          <h2>Objectives</h2>
+        </div>
+        <span id="objective-count" aria-live="polite">0 active</span>
+      </div>
+
+      <form id="objective-form">
+        <label for="objective-input">Add an objective</label>
+        <div class="input-row">
+          <input id="objective-input" name="objective" type="text" maxlength="120" placeholder="Example: Reach the northern gate" required>
+          <button class="button" type="submit">Add</button>
+        </div>
+      </form>
+      <ul class="objective-list" id="objective-list"></ul>
+      <p class="empty-state" id="objective-empty">No objectives yet. Story outcomes can be recorded here.</p>
+    </section>
+
+    <section class="panel" id="journal">
+      <p class="eyebrow">Field notes</p>
+      <h2>Journal</h2>
+      <label class="sr-only" for="journal-notes">Journal notes</label>
+      <textarea id="journal-notes" rows="8" placeholder="Record clues, character names, and decisions..."></textarea>
+      <p class="save-status" id="save-status" aria-live="polite">Saved on this device</p>
+    </section>
+
+    <section class="panel" id="audio">
+      <p class="eyebrow">Incoming transmission</p>
+      <h2>Audio archive</h2>
+      <p>Add an <code>intro.mp3</code> file to the <code>audio</code> folder to activate this sample player.</p>
+      <audio controls preload="metadata">
+        <source src="audio/intro.mp3" type="audio/mpeg">
+        Your browser does not support HTML audio.
+      </audio>
+    </section>
+
+    <section class="panel danger-zone">
+      <div>
+        <h2>Reset companion</h2>
+        <p>Clear objectives and journal notes stored in this browser.</p>
+      </div>
+      <button class="button button-danger" id="reset-progress" type="button">Reset progress</button>
+    </section>
+  </main>
+
+  <footer>
+    <p>Designed to support the physical board game.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

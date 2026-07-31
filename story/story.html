@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Story | Board Game Companion</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .story-shell {
+      width: min(100% - 2rem, 720px);
+      min-height: 100vh;
+      margin-inline: auto;
+      padding: clamp(2rem, 8vw, 6rem) 0;
+    }
+
+    .story-card {
+      padding: clamp(1.5rem, 5vw, 3rem);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .story-card h1 {
+      margin-top: 0;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+    }
+
+    .story-card p {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .choices {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+
+    .choices .button {
+      width: 100%;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main class="story-shell">
+    <a class="back-link" href="../index.html">← Back to companion</a>
+    <article class="story-card" id="passage" aria-live="polite"></article>
+  </main>
+
+  <script>
+    const passages = {
+      start: {
+        title: "A Signal in the Dark",
+        text: "The receiver crackles. Beyond the northern ridge, a pale light begins to pulse in a deliberate rhythm. Your crew waits for your command.",
+        choices: [
+          ["Follow the signal", "signal"],
+          ["Search the abandoned camp", "camp"]
+        ]
+      },
+      signal: {
+        title: "The Northern Ridge",
+        text: "The signal leads to a sealed relay station. Add this objective to your mission log: Restore power to the relay.",
+        choices: [["Return to the beginning", "start"]]
+      },
+      camp: {
+        title: "The Empty Camp",
+        text: "Fresh tracks leave the camp and disappear into the forest. Add this objective to your mission log: Identify who left the tracks.",
+        choices: [["Return to the beginning", "start"]]
+      }
+    };
+
+    const passage = document.querySelector("#passage");
+
+    function showPassage(id) {
+      const current = passages[id];
+      passage.replaceChildren();
+
+      const eyebrow = document.createElement("p");
+      eyebrow.className = "eyebrow";
+      eyebrow.textContent = "Story prototype";
+
+      const title = document.createElement("h1");
+      title.textContent = current.title;
+
+      const text = document.createElement("p");
+      text.textContent = current.text;
+
+      const choices = document.createElement("div");
+      choices.className = "choices";
+
+      current.choices.forEach(([label, target]) => {
+        const button = document.createElement("button");
+        button.className = "button";
+        button.type = "button";
+        button.textContent = label;
+        button.addEventListener("click", () => showPassage(target));
+        choices.append(button);
+      });
+
+      passage.append(eyebrow, title, text, choices);
+    }
+
+    showPassage("start");
+  </script>
+</body>
+</html>

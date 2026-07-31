@@ -1,0 +1,14 @@
+[
+  {
+    "id": "restore-relay",
+    "title": "Restore power to the relay",
+    "source": "northern-ridge",
+    "completed": false
+  },
+  {
+    "id": "follow-tracks",
+    "title": "Identify who left the tracks",
+    "source": "abandoned-camp",
+    "completed": false
+  }
+]

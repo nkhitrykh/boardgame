@@ -1,35 +1,47 @@
-# Board Game Digital Companion
+# Factory Companion
 
-A responsive static website that supports a physical board game with branching narrative events, objective tracking, journal notes, and audio playback.
+A responsive static companion for a single-player, level-based factory puzzle board game. The physical board handles factory construction and production; this site handles onboarding, level setup, round tracking, narrative branches, and device-local progress.
 
-## Project structure
+## Current experience
+
+- Home screen with New Game and Continue
+- Placeholder onboarding-video screen
+- Three-level campaign with the requested branching map
+- Input materials, allowed recipes, output goals, and round limits for every level
+- Easy, medium, and hard routes
+- Next Round, Objective Complete, retry, quit confirmation, and campaign completion states
+- Prototype rules available from both the home and play screens
+- Local save using `localStorage`
+- Responsive phone and desktop layouts
+
+## Branch map
 
 ```text
-boardgame/
-├── index.html
-├── style.css
-├── script.js
-├── story/
-│   └── story.html
-├── audio/
-├── images/
-├── objectives/
-│   └── sample-objectives.json
-└── assets/
+L1 Tutorial
+├── L2A Easy
+│   ├── L3A Easy
+│   └── L3B Medium
+└── L2B Hard
+    ├── L3B Medium
+    └── L3C Hard
 ```
+
+Level 1 uses the playtest objective and recipes from the concept document. Later levels are prototype balancing content and should be adjusted after physical playtesting.
 
 ## Run locally
 
-Open `index.html` directly in a browser, or use a local web server such as the Live Server extension in Visual Studio Code.
+Open `index.html` directly in a modern browser, or use a local static server such as the Live Server extension in Visual Studio Code.
 
-## Twine integration
+## Saving and privacy
 
-`story/story.html` is currently a small working prototype. When the Twine narrative is ready, export it as HTML and replace that file. Keep links and media paths relative so they work on GitHub Pages.
+Campaign progress is stored only in the current browser under `factory-companion.campaign.v2`. The site has no accounts, analytics, external scripts, database, or network API. Clearing browser site data removes the save.
 
-## Saving
+## Publishing
 
-Objectives and journal notes are saved only in the current browser using `localStorage`. The reset button removes that locally saved progress.
+The site uses relative paths and is compatible with a GitHub Pages project URL such as:
 
-## Publishing later
+```text
+https://USERNAME.github.io/boardgame/
+```
 
-This repository is ready for a future GitHub Pages deployment. After pushing it to GitHub, select the `main` branch and `/root` folder in the repository's Pages settings.
+Publish from the `main` branch and `/(root)` folder.

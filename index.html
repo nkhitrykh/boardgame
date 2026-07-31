@@ -3,78 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A digital companion for a physical board game.">
-  <title>Board Game Companion</title>
+  <meta name="description" content="A branching digital narrative companion for a single-player factory puzzle board game.">
+  <meta name="theme-color" content="#101311">
+  <title>Factory Companion</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="skip-link" href="#app">Skip to game companion</a>
+
   <header class="site-header">
-    <a class="brand" href="index.html">Board Game Companion</a>
-    <nav aria-label="Main navigation">
-      <a href="#objectives">Objectives</a>
-      <a href="#journal">Journal</a>
-      <a href="#audio">Audio</a>
+    <button class="brand" type="button" data-action="home" aria-label="Go to home screen">
+      <span class="brand-mark" aria-hidden="true">FC</span>
+      <span>Factory <b>Companion</b></span>
+    </button>
+
+    <nav aria-label="Companion controls">
+      <button class="nav-button" type="button" data-action="home">Home</button>
+      <button class="nav-button nav-button-accent" type="button" data-action="show-rules">Rules</button>
     </nav>
   </header>
 
-  <main>
-    <section class="hero">
-      <p class="eyebrow">Your mission continues</p>
-      <h1>A companion for the story at your table.</h1>
-      <p>Make choices, receive objectives, and keep track of discoveries while playing the physical board game.</p>
-      <a class="button button-primary" href="story/story.html">Start story</a>
-    </section>
+  <main id="app" tabindex="-1"></main>
 
-    <section class="panel" id="objectives">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Mission log</p>
-          <h2>Objectives</h2>
-        </div>
-        <span id="objective-count" aria-live="polite">0 active</span>
-      </div>
-
-      <form id="objective-form">
-        <label for="objective-input">Add an objective</label>
-        <div class="input-row">
-          <input id="objective-input" name="objective" type="text" maxlength="120" placeholder="Example: Reach the northern gate" required>
-          <button class="button" type="submit">Add</button>
-        </div>
-      </form>
-      <ul class="objective-list" id="objective-list"></ul>
-      <p class="empty-state" id="objective-empty">No objectives yet. Story outcomes can be recorded here.</p>
-    </section>
-
-    <section class="panel" id="journal">
-      <p class="eyebrow">Field notes</p>
-      <h2>Journal</h2>
-      <label class="sr-only" for="journal-notes">Journal notes</label>
-      <textarea id="journal-notes" rows="8" placeholder="Record clues, character names, and decisions..."></textarea>
-      <p class="save-status" id="save-status" aria-live="polite">Saved on this device</p>
-    </section>
-
-    <section class="panel" id="audio">
-      <p class="eyebrow">Incoming transmission</p>
-      <h2>Audio archive</h2>
-      <p>Add an <code>intro.mp3</code> file to the <code>audio</code> folder to activate this sample player.</p>
-      <audio controls preload="metadata">
-        <source src="audio/intro.mp3" type="audio/mpeg">
-        Your browser does not support HTML audio.
-      </audio>
-    </section>
-
-    <section class="panel danger-zone">
-      <div>
-        <h2>Reset companion</h2>
-        <p>Clear objectives and journal notes stored in this browser.</p>
-      </div>
-      <button class="button button-danger" id="reset-progress" type="button">Reset progress</button>
-    </section>
-  </main>
-
-  <footer>
-    <p>Designed to support the physical board game.</p>
+  <footer class="site-footer">
+    <span>Single-player factory puzzle</span>
+    <span class="footer-status"><i aria-hidden="true"></i> Device-local save</span>
   </footer>
+
+  <dialog class="modal" id="rules-dialog" aria-labelledby="rules-dialog-title">
+    <div class="modal-head">
+      <div>
+        <p class="kicker">Quick reference</p>
+        <h2 id="rules-dialog-title">Prototype rules</h2>
+      </div>
+      <button class="icon-button" type="button" data-action="close-rules" aria-label="Close rules">&times;</button>
+    </div>
+    <div id="rules-dialog-content"></div>
+  </dialog>
+
+  <dialog class="modal modal-small" id="confirm-dialog" aria-labelledby="confirm-title">
+    <p class="kicker">Confirm action</p>
+    <h2 id="confirm-title">Leave this level?</h2>
+    <p id="confirm-message"></p>
+    <div class="modal-actions">
+      <button class="button button-ghost" type="button" data-action="cancel-confirm">Cancel</button>
+      <button class="button button-danger" id="confirm-button" type="button">Confirm</button>
+    </div>
+  </dialog>
 
   <script src="script.js"></script>
 </body>

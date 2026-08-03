@@ -3,54 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A branching digital narrative companion for a single-player factory puzzle board game.">
-  <meta name="theme-color" content="#101311">
-  <title>Factory Companion</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Digital rule book, quick reference, level guide, and round tracker for Felix Producto.">
+  <meta name="theme-color" content="#202020">
+  <title>Felix Producto</title>
+  <link rel="stylesheet" href="style.css?v=20260803">
 </head>
 <body>
-  <a class="skip-link" href="#app">Skip to game companion</a>
-
-  <header class="site-header">
-    <button class="brand" type="button" data-action="home" aria-label="Go to home screen">
-      <span class="brand-mark" aria-hidden="true">FC</span>
-      <span>Factory <b>Companion</b></span>
-    </button>
-
-    <nav aria-label="Companion controls">
-      <button class="nav-button" type="button" data-action="home">Home</button>
-      <button class="nav-button nav-button-accent" type="button" data-action="show-rules">Rules</button>
-    </nav>
-  </header>
-
+  <a class="skip-link" href="#app">Skip to content</a>
   <main id="app" tabindex="-1"></main>
-
-  <footer class="site-footer">
-    <span>Single-player factory puzzle</span>
-    <span class="footer-status"><i aria-hidden="true"></i> Device-local save</span>
-  </footer>
-
-  <dialog class="modal" id="rules-dialog" aria-labelledby="rules-dialog-title">
-    <div class="modal-head">
-      <div>
-        <p class="kicker">Quick reference</p>
-        <h2 id="rules-dialog-title">Prototype rules</h2>
-      </div>
-      <button class="icon-button" type="button" data-action="close-rules" aria-label="Close rules">&times;</button>
-    </div>
-    <div id="rules-dialog-content"></div>
-  </dialog>
-
-  <dialog class="modal modal-small" id="confirm-dialog" aria-labelledby="confirm-title">
-    <p class="kicker">Confirm action</p>
-    <h2 id="confirm-title">Leave this level?</h2>
-    <p id="confirm-message"></p>
-    <div class="modal-actions">
-      <button class="button button-ghost" type="button" data-action="cancel-confirm">Cancel</button>
-      <button class="button button-danger" id="confirm-button" type="button">Confirm</button>
-    </div>
-  </dialog>
-
-  <script src="script.js"></script>
+  <script src="app.js?v=20260803"></script>
 </body>
 </html>

@@ -229,6 +229,11 @@ a {
   color: var(--text);
 }
 
+.text-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .save-note {
   margin: 0.8rem 0 0;
   font-size: 0.85rem;
@@ -312,6 +317,25 @@ a {
   font-size: 1.05rem;
 }
 
+.credit-summary-content {
+  display: grid;
+  align-self: center;
+  justify-items: center;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.credit-summary-content > strong {
+  color: var(--text);
+  font-size: 1.35rem;
+}
+
+.credit-summary-content > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: bold;
+}
+
 .objective-list,
 .output-marker-list {
   width: min(100%, 620px);
@@ -384,14 +408,25 @@ a {
   color: #fff;
 }
 
+.marker-deck-reminder {
+  margin: 0;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: #242424;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: bold;
+  text-align: center;
+}
+
 .level-columns {
   display: grid;
-  grid-template-columns: 0.85fr 1.4fr 0.95fr;
+  grid-template-columns: 1fr 1fr;
 }
 
 .level-column {
   min-width: 0;
-  padding: 0.8rem 0.9rem;
+  padding: 0.65rem 0.85rem 0.3rem;
   border-right: 1px solid var(--border);
   text-align: center;
 }
@@ -414,8 +449,8 @@ a {
   display: grid;
   align-items: center;
   gap: 0.5rem;
-  min-height: 34px;
-  padding: 0.3rem 0;
+  min-height: 30px;
+  padding: 0.2rem 0;
   border-bottom: 1px solid var(--border);
   font-size: 0.84rem;
   grid-template-columns: 70px minmax(0, 1fr) 70px;
@@ -465,7 +500,7 @@ a {
 .quit-row {
   display: flex;
   justify-content: flex-end;
-  padding: 0.3rem 0.8rem 0.7rem;
+  padding: 0.2rem 0.8rem 0.35rem;
 }
 
 .choice-list {
@@ -605,6 +640,199 @@ a {
   text-align: center;
 }
 
+.credit-tracker {
+  border-top: 1px solid var(--border);
+  background: #181818;
+  text-align: left;
+}
+
+.credit-tracker-header {
+  display: grid;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.credit-tracker-header > div:first-child {
+  min-width: 0;
+}
+
+.credit-tracker-header h2 {
+  margin-bottom: 0.1rem;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+
+.credit-tracker-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.credit-balance-panel {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--accent-strong);
+  border-radius: 5px;
+  background: #29465a;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.credit-balance-panel > span {
+  font-size: 0.68rem;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.credit-balance-panel > strong {
+  font-size: 1.45rem;
+}
+
+.credit-option-columns {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  grid-template-columns: minmax(190px, 0.7fr) minmax(0, 2.3fr);
+}
+
+.credit-option-section {
+  min-width: 0;
+}
+
+.credit-option-section h3 {
+  margin-bottom: 0.35rem;
+  color: var(--accent);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.credit-action-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.credit-income-actions {
+  grid-template-columns: 1fr;
+}
+
+.credit-spend-actions {
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+}
+
+.credit-action {
+  display: grid;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 40px;
+  padding: 0.38rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--button);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.76rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  text-align: left;
+}
+
+.credit-action:hover,
+.credit-action:focus-visible {
+  border-color: var(--accent);
+  background: #333;
+}
+
+.credit-action:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.credit-action strong {
+  min-width: 32px;
+  color: var(--accent);
+  text-align: center;
+}
+
+.credit-tracker-footer {
+  display: grid;
+  align-items: start;
+  gap: 0.65rem;
+  padding: 0 0.75rem 0.6rem;
+  grid-template-columns: auto minmax(220px, 1fr);
+}
+
+.credit-history-section {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--card-raised);
+}
+
+.credit-history-section summary {
+  padding: 0.48rem 0.6rem;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: bold;
+}
+
+.credit-history-body {
+  padding: 0 0.6rem 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.credit-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.credit-history {
+  margin-top: 0.45rem;
+}
+
+.credit-history li {
+  min-height: 28px;
+  padding: 0.18rem 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  text-align: left;
+}
+
+.credit-history li > * {
+  text-align: left;
+}
+
+.credit-history strong {
+  min-width: 34px;
+  text-align: right;
+}
+
+.credit-positive {
+  color: #79b798;
+}
+
+.credit-negative {
+  color: #e29a9a;
+}
+
+.credit-history-empty {
+  color: var(--muted);
+  grid-template-columns: 1fr !important;
+}
+
+.credit-corrections {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
 .rulebook-page {
   max-width: 1240px;
   margin-inline: auto;
@@ -736,6 +964,7 @@ a {
 .marker-type-grid strong {
   padding: 0.7rem;
   border-right: 1px solid var(--border);
+  text-align: center;
 }
 
 .marker-type-grid strong:last-child {
@@ -924,8 +1153,21 @@ a {
   .choice-list,
   .phase-grid,
   .full-phase-grid,
-  .level-index {
+  .level-index,
+  .credit-option-columns {
     grid-template-columns: 1fr;
+  }
+
+  .credit-income-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .credit-tracker-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .credit-corrections {
+    justify-content: center;
   }
 
   .rulebook-header {
@@ -1046,6 +1288,28 @@ a {
 
   .cost-grid strong {
     min-width: 0;
+  }
+
+  .credit-action {
+    gap: 0.5rem;
+    min-height: 44px;
+    font-size: 0.82rem;
+  }
+
+  .credit-tracker-header {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .credit-option-columns {
+    padding: 0.55rem 0.6rem;
+  }
+
+  .credit-spend-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .credit-tracker-footer {
+    padding-inline: 0.6rem;
   }
 }
 

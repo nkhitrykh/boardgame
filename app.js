@@ -1,4 +1,5 @@
-const SAVE_KEY = "felix-producto.campaign.v3";
+const SAVE_KEY = "felix-producto.campaign.v4";
+const LEGACY_SAVE_KEY = "felix-producto.campaign.v3";
 
 const LEVELS = {
   L0: {
@@ -8,13 +9,6 @@ const LEVELS = {
     credits: 4,
     objective: [["Iron", 1], ["Copper", 1]],
     inputs: [["Minerals", 2], ["Coal", 2]],
-    recipes: [
-      "2 Minerals + 1 Coal → 2 Copper",
-      "1 Copper + 1 Coal → 1 Iron",
-      "1 Minerals + 1 Coal → 1 Copper",
-      "1 Minerals → 1 Coal",
-      "2 Coal → 1 Iron"
-    ],
     bonusOutputs: [],
     specialRules: [],
     next: ["L1"]
@@ -26,16 +20,7 @@ const LEVELS = {
     credits: 3,
     objective: [["Copper", 2], ["Steel", 1]],
     inputs: [["Minerals", 2], ["Minerals", 4], ["Coal", 2]],
-    recipes: [
-      "1 Iron + 1 Minerals → 1 Steel",
-      "1 Copper + 1 Iron → 1 Steel",
-      "1 Iron → 2 Coal",
-      "1 Coal + 2 Minerals → 2 Iron",
-      "2 Minerals + 2 Coal → 2 Copper",
-      "1 Coal + 4 Minerals → 1 Steel",
-      "1 Iron + 1 Mineral → 2 Copper"
-    ],
-    bonusOutputs: [["1 Iron", "1 Credit/Round"]],
+    bonusOutputs: [["1 Iron", "1 Credit / Recipe Phase"]],
     specialRules: [],
     next: ["L2A", "L2B"]
   },
@@ -46,16 +31,7 @@ const LEVELS = {
     credits: 4,
     objective: [["Screws", 3], ["Refined Uranium", 2]],
     inputs: [["Uranium", 3], ["Coal", 2], ["Minerals", 3], ["Minerals", 2]],
-    recipes: [
-      "3 Minerals → 2 Iron",
-      "2 Minerals + 1 Uranium → 1 Refined Uranium",
-      "2 Uranium + 2 Coal + 1 Iron → 2 Refined Uranium",
-      "1 Iron → 1 Screw",
-      "2 Coal + 2 Minerals → 3 Screws",
-      "1 Refined Uranium → 2 Screws",
-      "2 Coal + 1 Minerals → 4 Screws"
-    ],
-    bonusOutputs: [["1 Screw", "1 Credit/Round"], ["1 Uranium", "1 Credit/Round"]],
+    bonusOutputs: [["1 Screw", "1 Credit / Recipe Phase"], ["1 Uranium", "1 Credit / Recipe Phase"]],
     specialRules: [
       "Uranium may NOT be on a conveyor adjacent (within 1 Game Board Tile) of a conveyor containing Copper, Iron or Steel. This does NOT include Refined Uranium. This does NOT prohibit diagonal adjacency."
     ],
@@ -68,16 +44,7 @@ const LEVELS = {
     credits: 3,
     objective: [["Screws", 3], ["Refined Uranium", 2]],
     inputs: [["Uranium", 3], ["Coal", 2], ["Minerals", 3], ["Minerals", 2]],
-    recipes: [
-      "3 Minerals → 2 Iron",
-      "2 Minerals + 1 Uranium → 1 Refined Uranium",
-      "2 Uranium + 2 Coal + 1 Iron → 2 Refined Uranium",
-      "1 Iron → 1 Screw",
-      "2 Coal + 2 Minerals → 3 Screws",
-      "1 Refined Uranium → 2 Screws",
-      "2 Coal + 1 Minerals → 4 Screws"
-    ],
-    bonusOutputs: [["1 Screw", "1 Credit/Round"], ["1 Uranium", "1 Credit/Round"]],
+    bonusOutputs: [["1 Screw", "1 Credit / Recipe Phase"], ["1 Uranium", "1 Credit / Recipe Phase"]],
     specialRules: [
       "Uranium may NOT be on a conveyor adjacent (within 1 Game Board Tile) of a conveyor containing Copper, Iron or Steel. This does NOT include Refined Uranium. This does NOT prohibit diagonal adjacency."
     ],
@@ -96,6 +63,21 @@ const RESOURCES = [
   "Screws"
 ];
 
+const CREDIT_SPEND_ACTIONS = [
+  ["Purchase Marker", 2],
+  ["Discard 2 Revealed Markers", 2],
+  ["Place Reserved Marker", 2],
+  ["Move Placed Marker", 1],
+  ["Swap 2 Recipe Markers", 2],
+  ["Alter Existing Conveyors", 1],
+  ["Place Curved or Split Conveyor", 1]
+];
+
+const CREDIT_INCOME_ACTIONS = [
+  ["Satisfied Output Marker", 1],
+  ["Satisfied Objective Output", 1]
+];
+
 const app = document.querySelector("#app");
 let campaign = loadCampaign();
 let currentView = "home";
@@ -103,20 +85,36 @@ let rulebookReturnView = "home";
 
 function newCampaign() {
   return {
-    version: 3,
+    version: 4,
     screen: "onboarding",
     levelId: "L0",
     round: 1,
+    credits: 0,
+    creditHistory: [],
     route: []
   };
 }
 
 function loadCampaign() {
   try {
-    const value = JSON.parse(localStorage.getItem(SAVE_KEY));
-    if (!value || value.version !== 3 || !LEVELS[value.levelId]) return null;
+    const savedValue = localStorage.getItem(SAVE_KEY) || localStorage.getItem(LEGACY_SAVE_KEY);
+    const value = JSON.parse(savedValue);
+    if (!value || ![3, 4].includes(value.version) || !LEVELS[value.levelId]) return null;
     if (!Number.isInteger(value.round) || value.round < 1) return null;
-    return value;
+    const normalized = {
+      ...value,
+      version: 4,
+      credits: Number.isInteger(value.credits) && value.credits >= 0
+        ? value.credits
+        : LEVELS[value.levelId].credits,
+      creditHistory: Array.isArray(value.creditHistory)
+        ? value.creditHistory.filter((entry) => (
+          entry && typeof entry.label === "string" && Number.isInteger(entry.amount)
+        )).slice(-20)
+        : []
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(normalized));
+    return normalized;
   } catch {
     return null;
   }
@@ -135,6 +133,109 @@ function roundText(level) {
   return level.roundLimit
     ? `Round ${campaign.round} of ${level.roundLimit}`
     : `Round ${campaign.round} of Unlimited`;
+}
+
+function resetLevelCredits(levelId) {
+  const income = LEVELS[levelId].credits;
+  campaign.credits = income;
+  campaign.creditHistory = [{ label: "Round 1 income", amount: income }];
+}
+
+function recordCreditTransaction(label, amount) {
+  if (!Number.isInteger(amount) || !label) return false;
+  if (amount < 0 && campaign.credits < Math.abs(amount)) return false;
+  campaign.credits += amount;
+  campaign.creditHistory.push({ label, amount });
+  campaign.creditHistory = campaign.creditHistory.slice(-20);
+  saveCampaign();
+  return true;
+}
+
+function creditHistoryMarkup() {
+  if (!campaign.creditHistory.length) {
+    return `<li class="credit-history-empty">No Credit activity yet.</li>`;
+  }
+
+  return campaign.creditHistory.slice().reverse().slice(0, 8).map((entry) => `
+    <li>
+      <span>${entry.label}</span>
+      <strong class="${entry.amount > 0 ? "credit-positive" : "credit-negative"}">${entry.amount > 0 ? "+" : ""}${entry.amount}</strong>
+    </li>
+  `).join("");
+}
+
+function creditActionMarkup([label, amount], type) {
+  const signedAmount = type === "spend" ? -amount : amount;
+  const disabled = signedAmount < 0 && campaign.credits < amount ? "disabled" : "";
+  const costAttribute = signedAmount < 0 ? `data-credit-cost="${amount}"` : "";
+  return `
+    <button class="credit-action" type="button" data-action="credit-change" data-label="${label}" data-amount="${signedAmount}" ${costAttribute} ${disabled}>
+      <span>${label}</span>
+      <strong>${signedAmount > 0 ? "+" : ""}${signedAmount}</strong>
+    </button>
+  `;
+}
+
+function creditTrackerMarkup(level) {
+  return `
+    <section class="credit-tracker" aria-labelledby="credit-tracker-title">
+      <header class="credit-tracker-header">
+        <div>
+          <h2 id="credit-tracker-title">Credit Tracker</h2>
+          <p>+${level.credits} Credits automatically at the start of each Round</p>
+        </div>
+        <div class="credit-balance-panel" aria-live="polite">
+          <strong data-credit-balance>${campaign.credits}</strong>
+          <span>Credits</span>
+        </div>
+      </header>
+
+      <div class="credit-option-columns">
+        <section class="credit-option-section">
+          <h3>Receive Credits</h3>
+          <div class="credit-action-list credit-income-actions">
+            ${CREDIT_INCOME_ACTIONS.map((action) => creditActionMarkup(action, "income")).join("")}
+          </div>
+        </section>
+
+        <section class="credit-option-section">
+          <h3>Spend Credits</h3>
+          <div class="credit-action-list credit-spend-actions">
+            ${CREDIT_SPEND_ACTIONS.map((action) => creditActionMarkup(action, "spend")).join("")}
+          </div>
+        </section>
+      </div>
+
+      <footer class="credit-tracker-footer">
+        <div class="credit-corrections" aria-label="Manual Credit correction">
+          <button class="button compact-button" type="button" data-action="credit-change" data-label="Manual Credit Added" data-amount="1">Add 1</button>
+          <button class="button compact-button" type="button" data-action="credit-change" data-label="Manual Credit Removed" data-amount="-1" data-credit-cost="1" ${campaign.credits ? "" : "disabled"}>Remove 1</button>
+        </div>
+        <details class="credit-history-section">
+          <summary>Recent Activity</summary>
+          <div class="credit-history-body">
+            <div class="credit-section-heading">
+              <button class="text-button neutral-text-button" type="button" data-action="undo-credit" ${campaign.creditHistory.length ? "" : "disabled"}>Undo Last</button>
+            </div>
+            <ul class="plain-list credit-history" data-credit-history>${creditHistoryMarkup()}</ul>
+          </div>
+        </details>
+      </footer>
+    </section>
+  `;
+}
+
+function updateCreditDisplays() {
+  document.querySelectorAll("[data-credit-balance]").forEach((element) => {
+    element.textContent = campaign.credits;
+  });
+  document.querySelectorAll("[data-credit-cost]").forEach((button) => {
+    button.disabled = campaign.credits < Number(button.dataset.creditCost);
+  });
+  const history = document.querySelector("[data-credit-history]");
+  if (history) history.innerHTML = creditHistoryMarkup();
+  const undoButton = document.querySelector('[data-action="undo-credit"]');
+  if (undoButton) undoButton.disabled = campaign.creditHistory.length === 0;
 }
 
 function saveDescription() {
@@ -162,8 +263,8 @@ function quickRulesDialogMarkup() {
                 <ul>
                   <li>Receive the Credits listed for the Level.</li>
                   <li>Receive additional Credits from satisfied Output Markers and 1 additional Credit from each satisfied Level Objective Output. Neither requires the Factory to be “Switched on”.</li>
-                  <li>Reveal the top 2 Markers. Purchase or Reserve a Marker.</li>
-                  <li>Pay for a Purchased Marker immediately. Reserving a Marker does NOT cost Credits until it is Placed in the Build Phase.</li>
+                  <li>Reveal Markers from the Marker Deck until 2 are face-up.</li>
+                  <li>Purchase a Marker for 2 Credits, or Reserve one Marker for free.</li>
                   <li>You may only Reserve one Marker at a time. It is not affected by revealing new Markers, and you may discard it at any time during the Recipe Phase.</li>
                   <li>Spend 2 Credits to discard the 2 revealed Markers and reveal the next 2. If the Marker Deck is empty, shuffle the Marker Discard pile to replenish it.</li>
                 </ul>
@@ -172,7 +273,7 @@ function quickRulesDialogMarkup() {
                 <h4>2. Build Phase</h4>
                 <ul>
                   <li>You MUST Place a Purchased Recipe or Output Marker. This does NOT cost Credits.</li>
-                  <li>You MAY Pay the labeled Credits to place a Reserved Recipe or Output Marker.</li>
+                  <li>You MAY Pay 2 Credits to place a Reserved Marker.</li>
                   <li>Pay 1 Credit to move an already Placed Marker.</li>
                   <li>Pay 2 Credits to Swap 2 Recipe Markers.</li>
                   <li>Freely Rotate Recipe and Output Markers.</li>
@@ -206,7 +307,9 @@ function quickRulesDialogMarkup() {
           <section class="quick-section">
             <h3>Credit Reference</h3>
             <div class="cost-grid">
+              <span>Purchase a Marker</span><strong>2 Credits</strong>
               <span>Discard the 2 revealed Markers and reveal the next 2</span><strong>2 Credits</strong>
+              <span>Place a Reserved Marker</span><strong>2 Credits</strong>
               <span>Move a Placed Marker</span><strong>1 Credit</strong>
               <span>Swap 2 Recipe Markers</span><strong>2 Credits</strong>
               <span>Alter existing Conveyors for the Round</span><strong>1 Credit</strong>
@@ -265,15 +368,6 @@ function inputMarkup(level) {
   `).join("");
 }
 
-function recipeMarkup(level) {
-  return level.recipes.map((recipe, index) => `
-    <li>
-      <span class="recipe-number">R${String(index + 1).padStart(2, "0")}</span>
-      <span>${recipe}</span>
-    </li>
-  `).join("");
-}
-
 function bonusOutputMarkup(level) {
   if (!level.bonusOutputs.length) {
     return `<li class="none-row"><span>None</span></li>`;
@@ -301,8 +395,6 @@ function levelIndexMarkup() {
         <ul>${level.objective.map(([resource, amount]) => `<li>${amount} ${resource}</li>`).join("")}</ul>
         <h4>INPUTS</h4>
         <ul>${level.inputs.map(([name, amount]) => `<li>${amount} ${name}</li>`).join("")}</ul>
-        <h4>RECIPES</h4>
-        <ul>${level.recipes.map((recipe) => `<li>${recipe.replace("→", "=")}</li>`).join("")}</ul>
         <h4>OUTPUTS (Not OBJECTIVES)</h4>
         <ul>${level.bonusOutputs.length ? level.bonusOutputs.map(([requirement, reward]) => `<li>${requirement} = ${reward}</li>`).join("") : "<li>NONE</li>"}</ul>
       </div>
@@ -367,9 +459,12 @@ function renderLevel() {
             <h2>Round</h2>
             <strong role="status" aria-live="polite">${roundText(level)}</strong>
           </div>
-          <div class="summary-block">
+          <div class="summary-block credit-summary-block">
             <h2>Credits</h2>
-          <strong>${level.credits} / Round</strong>
+            <div class="credit-summary-content">
+              <strong data-credit-balance>${campaign.credits}</strong>
+              <span>+${level.credits} / Round</span>
+            </div>
         </div>
       </section>
 
@@ -385,15 +480,12 @@ function renderLevel() {
           <button class="button button-success" type="button" data-action="objective-complete">Objective Complete</button>
         </div>
 
+      <p class="marker-deck-reminder">Reveal Markers from the Marker Deck until 2 are face-up.</p>
+
       <div class="level-columns">
         <section class="level-column">
           <h2>Input Markers</h2>
           <ul class="plain-list">${inputMarkup(level)}</ul>
-        </section>
-
-        <section class="level-column recipe-column">
-          <h2>Recipe Markers (1–${level.recipes.length})</h2>
-          <ul class="plain-list recipe-list">${recipeMarkup(level)}</ul>
         </section>
 
         <section class="level-column">
@@ -401,6 +493,8 @@ function renderLevel() {
           <ul class="plain-list output-marker-list">${bonusOutputMarkup(level)}</ul>
         </section>
       </div>
+
+      ${creditTrackerMarkup(level)}
 
       <div class="quit-row">
         <button class="text-button" type="button" data-action="quit">Quit</button>
@@ -532,6 +626,7 @@ function renderRulebook() {
         <p>30x straight, 30x split, 30x curved Conveyor Tokens connect Input, Recipe and Output Markers to each other and to Objective Output Tiles.</p>
         <h3>Credit Tokens:</h3>
         <p>26 Credit Tokens representing 1 Credit each.</p>
+        <p class="site-note portal-note">The Digital Portal can track the current Credit total during each Level.</p>
         <h3>Digital Portal:</h3>
         <p><a href="https://nkhitrykh.github.io/felix-producto/">https://nkhitrykh.github.io/felix-producto/</a></p>
         <p class="site-note portal-note">The Digital Portal is required to play Felix Producto.</p>
@@ -547,8 +642,8 @@ function renderRulebook() {
       <section class="rulebook-section" id="setup">
         <h2>Game Setup:</h2>
         <ol>
-          <li>Place the Game Board in the center of the table, aligning each labeled side.</li>
-          <li>Place the designated Input Markers for the level on their designated Input Tile of the Game Board (see Digital Portal or Level Index). Set unused Input Markers aside, you will not need these for the current level.</li>
+          <li>Place the Game Board in the center of the table, aligning each side to make a 6x6 grid with the marked INPUT Tiles in the top-left Corner, and the OUTPUT Tiles on the bottom-center.</li>
+          <li>Place the designated Input Markers for the level on their designated Input Tiles of the Game Board (see Digital Portal or Level Index). Set unused Input Markers aside, you will not need these for the current level.</li>
           <li>Take the assigned Recipe Markers out of the Recipe Deck (see Digital Portal or Level Index). Set unused Recipe Markers aside, you will not need these for the current level.</li>
           <li>Take the assigned Output Markers out of the Output Deck (see Digital Portal or Level Index). Set unused Output Markers aside, you will not need these for the current level.</li>
           <li>Shuffle the assigned Recipe and Output Markers together and place them face down on the table, this is the Marker Deck.</li>
@@ -573,17 +668,17 @@ function renderRulebook() {
           <article class="full-phase">
             <h3>1. Recipe Phase</h3>
             <ol>
-              <li>Receive 3 Credits per round.
+              <li>Receive Credits according to the Level settings (see Index or Digital Portal).
                 <ol>
                   <li>Receive additional Credits according to satisfied Output Markers (Output Markers placed on the Game Board that are connected to required Resource Inputs).</li>
                   <li>Receive 1 additional Credit according to satisfied Level Objective Outputs (Resource delivered to Game Board Objective Output Tile)</li>
                   <li>Neither of these requires the Factory to be “Switched on” to grant the additional Credits.</li>
                 </ol>
               </li>
-              <li>Reveal the top 2 Markers of the Marker Deck. (Skip this step if 2 Markers are already revealed)</li>
+              <li>Reveal Markers from the Marker Deck until 2 are face-up. (Skip this step if 2 Markers are already revealed, see Recipe Phase D for further options)</li>
               <li>You may Purchase or Reserve a Marker from the 2 revealed Recipe Markers.
                 <ol>
-                  <li>If you Purchase a Marker, pay the Credits labeled on the Marker immediately. You will NOT need to pay Credits to Place this Marker on the Game Board in the Build Phase.</li>
+                  <li>If you Purchase a Marker, pay 2 Credits immediately. You will NOT need to pay Credits to Place this Marker on the Game Board in the Build Phase.</li>
                   <li>You may only Reserve one Marker at a time. This Marker will not be affected by revealing new Markers (see below).
                     <ol><li>You may choose to discard this Marker at any time during the Recipe Phase.</li></ol>
                   </li>
@@ -601,7 +696,7 @@ function renderRulebook() {
               <li>You MUST Place a Purchased Recipe or Output Marker on ANY empty Game Board Tile in ANY orientation.
                 <ol><li>This does NOT cost Credits as the Marker has already been Purchased.</li></ol>
               </li>
-              <li>You MAY Pay the Credits labeled on a Reserved Recipe or Output Marker to place it on ANY empty Game Board Tile in ANY orientation.</li>
+              <li>You MAY Pay 2 Credits to place a Reserved Marker on ANY empty Game Board Tile in ANY orientation.</li>
               <li>Recipes do NOT have to be adjacent to each other, but WILL need conveyor connections to function.</li>
               <li>You may Pay 1 Credit to move an already Placed Marker.</li>
               <li>You may Pay 2 Credits to Swap the positions of 2 Recipe Markers.
@@ -694,6 +789,7 @@ function advanceToLevel(levelId) {
   if (!LEVELS[levelId]) return;
   campaign.levelId = levelId;
   campaign.round = 1;
+  resetLevelCredits(levelId);
   campaign.route.push(levelId);
   campaign.screen = "level";
   saveCampaign();
@@ -718,6 +814,18 @@ document.addEventListener("click", (event) => {
     document.querySelector("#quick-rules-dialog")?.close();
   }
 
+  if (action === "credit-change") {
+    const amount = Number(button.dataset.amount);
+    if (recordCreditTransaction(button.dataset.label, amount)) updateCreditDisplays();
+  }
+
+  if (action === "undo-credit" && campaign.creditHistory.length) {
+    const transaction = campaign.creditHistory.pop();
+    campaign.credits -= transaction.amount;
+    saveCampaign();
+    updateCreditDisplays();
+  }
+
   if (action === "open-rulebook") {
     if (currentView !== "rulebook") rulebookReturnView = currentView;
     document.querySelector("#quick-rules-dialog")?.close();
@@ -740,6 +848,7 @@ document.addEventListener("click", (event) => {
     campaign.screen = "level";
     campaign.levelId = "L0";
     campaign.round = 1;
+    resetLevelCredits("L0");
     saveCampaign();
     renderLevel();
   }
@@ -752,7 +861,7 @@ document.addEventListener("click", (event) => {
       renderFailed();
     } else {
       campaign.round += 1;
-      saveCampaign();
+      recordCreditTransaction(`Round ${campaign.round} income`, level.credits);
       renderLevel();
     }
   }
@@ -777,6 +886,7 @@ document.addEventListener("click", (event) => {
   if (action === "retry-level") {
     campaign.round = 1;
     campaign.screen = "level";
+    resetLevelCredits(campaign.levelId);
     saveCampaign();
     renderLevel();
   }

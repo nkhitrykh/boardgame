@@ -1,5 +1,5 @@
-const SAVE_KEY = "felix-producto.campaign.v4";
-const LEGACY_SAVE_KEY = "felix-producto.campaign.v3";
+const SAVE_KEY = "felix-producto.campaign.v5";
+const LEGACY_SAVE_KEYS = ["felix-producto.campaign.v4", "felix-producto.campaign.v3"];
 
 const LEVELS = {
   L0: {
@@ -63,20 +63,28 @@ const RESOURCES = [
   "Screws"
 ];
 
-const CREDIT_SPEND_ACTIONS = [
-  ["Purchase Marker", 2],
-  ["Discard 2 Revealed Markers", 2],
-  ["Place Reserved Marker", 2],
-  ["Move Placed Marker", 1],
-  ["Swap 2 Recipe Markers", 2],
-  ["Alter Existing Conveyors", 1],
-  ["Place Curved or Split Conveyor", 1]
+const PHASES = [
+  { id: "recipe", label: "Recipe Phase" },
+  { id: "build", label: "Build Phase" },
+  { id: "conveyor", label: "Conveyor Phase" },
+  { id: "cleanup", label: "Clean Up" }
 ];
 
-const CREDIT_INCOME_ACTIONS = [
-  ["Satisfied Output Marker", 1],
-  ["Satisfied Objective Output", 1]
-];
+const CREDIT_SPEND_ACTIONS = {
+  recipe: [
+    ["Purchase Recipe", 2],
+    ["Discard 2 Revealed Recipes", 2]
+  ],
+  build: [
+    ["Move Placed Recipe", 1],
+    ["Swap 2 Recipes", 2]
+  ],
+  conveyor: [
+    ["Alter Existing Conveyors", 1],
+    ["Place Curved or Split Conveyor", 1]
+  ],
+  cleanup: []
+};
 
 const app = document.querySelector("#app");
 let campaign = loadCampaign();
@@ -85,33 +93,51 @@ let rulebookReturnView = "home";
 
 function newCampaign() {
   return {
-    version: 4,
+    version: 5,
     screen: "onboarding",
     levelId: "L0",
     round: 1,
+    phase: "recipe",
     credits: 0,
     creditHistory: [],
+    incomeBonuses: { optionalOutputs: 0, objectiveOutputs: 0 },
+    seenMechanics: [],
     route: []
   };
 }
 
 function loadCampaign() {
   try {
-    const savedValue = localStorage.getItem(SAVE_KEY) || localStorage.getItem(LEGACY_SAVE_KEY);
+    const savedValue = localStorage.getItem(SAVE_KEY)
+      || LEGACY_SAVE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
     const value = JSON.parse(savedValue);
-    if (!value || ![3, 4].includes(value.version) || !LEVELS[value.levelId]) return null;
+    if (!value || ![3, 4, 5].includes(value.version) || !LEVELS[value.levelId]) return null;
     if (!Number.isInteger(value.round) || value.round < 1) return null;
+    const level = LEVELS[value.levelId];
+    const incomeBonuses = value.incomeBonuses || {};
     const normalized = {
       ...value,
-      version: 4,
+      version: 5,
+      phase: PHASES.some((phase) => phase.id === value.phase) ? value.phase : "recipe",
       credits: Number.isInteger(value.credits) && value.credits >= 0
         ? value.credits
-        : LEVELS[value.levelId].credits,
+        : level.credits,
       creditHistory: Array.isArray(value.creditHistory)
         ? value.creditHistory.filter((entry) => (
           entry && typeof entry.label === "string" && Number.isInteger(entry.amount)
         )).slice(-20)
-        : []
+        : [],
+      incomeBonuses: {
+        optionalOutputs: Math.min(
+          level.bonusOutputs.length,
+          Math.max(0, Number.isInteger(incomeBonuses.optionalOutputs) ? incomeBonuses.optionalOutputs : 0)
+        ),
+        objectiveOutputs: Math.min(
+          level.objective.length,
+          Math.max(0, Number.isInteger(incomeBonuses.objectiveOutputs) ? incomeBonuses.objectiveOutputs : 0)
+        )
+      },
+      seenMechanics: Array.isArray(value.seenMechanics) ? value.seenMechanics : []
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(normalized));
     return normalized;
@@ -135,8 +161,20 @@ function roundText(level) {
     : `Round ${campaign.round} of Unlimited`;
 }
 
+function currentPhase() {
+  return PHASES.find((phase) => phase.id === campaign.phase) || PHASES[0];
+}
+
+function roundIncome(level) {
+  return level.credits
+    + campaign.incomeBonuses.optionalOutputs
+    + campaign.incomeBonuses.objectiveOutputs;
+}
+
 function resetLevelCredits(levelId) {
   const income = LEVELS[levelId].credits;
+  campaign.phase = "recipe";
+  campaign.incomeBonuses = { optionalOutputs: 0, objectiveOutputs: 0 };
   campaign.credits = income;
   campaign.creditHistory = [{ label: "Round 1 income", amount: income }];
 }
@@ -164,25 +202,38 @@ function creditHistoryMarkup() {
   `).join("");
 }
 
-function creditActionMarkup([label, amount], type) {
-  const signedAmount = type === "spend" ? -amount : amount;
-  const disabled = signedAmount < 0 && campaign.credits < amount ? "disabled" : "";
-  const costAttribute = signedAmount < 0 ? `data-credit-cost="${amount}"` : "";
+function creditActionMarkup([label, amount]) {
+  const disabled = campaign.credits < amount ? "disabled" : "";
   return `
-    <button class="credit-action" type="button" data-action="credit-change" data-label="${label}" data-amount="${signedAmount}" ${costAttribute} ${disabled}>
+    <button class="credit-action" type="button" data-action="credit-change" data-label="${label}" data-amount="-${amount}" data-credit-cost="${amount}" ${disabled}>
       <span>${label}</span>
-      <strong>${signedAmount > 0 ? "+" : ""}${signedAmount}</strong>
+      <strong>-${amount}</strong>
     </button>
   `;
 }
 
+function incomeBonusControlMarkup(label, type, value, maximum) {
+  return `
+    <div class="income-bonus-control">
+      <span>${label}</span>
+      <div class="stepper" aria-label="${label}">
+        <button type="button" data-action="adjust-income-bonus" data-bonus-type="${type}" data-delta="-1" ${value === 0 ? "disabled" : ""} aria-label="Decrease ${label}">-</button>
+        <strong data-bonus-count="${type}">${value}</strong>
+        <button type="button" data-action="adjust-income-bonus" data-bonus-type="${type}" data-delta="1" ${value >= maximum ? "disabled" : ""} aria-label="Increase ${label}">+</button>
+      </div>
+    </div>
+  `;
+}
+
 function creditTrackerMarkup(level) {
+  const phase = currentPhase();
+  const spendActions = CREDIT_SPEND_ACTIONS[phase.id];
   return `
     <section class="credit-tracker" aria-labelledby="credit-tracker-title">
       <header class="credit-tracker-header">
         <div>
           <h2 id="credit-tracker-title">Credit Tracker</h2>
-          <p>+${level.credits} Credits automatically at the start of each Round</p>
+          <p><strong data-credit-rate>+${roundIncome(level)}</strong> at the start of each Recipe Phase</p>
         </div>
         <div class="credit-balance-panel" aria-live="polite">
           <strong data-credit-balance>${campaign.credits}</strong>
@@ -191,17 +242,21 @@ function creditTrackerMarkup(level) {
       </header>
 
       <div class="credit-option-columns">
-        <section class="credit-option-section">
-          <h3>Receive Credits</h3>
-          <div class="credit-action-list credit-income-actions">
-            ${CREDIT_INCOME_ACTIONS.map((action) => creditActionMarkup(action, "income")).join("")}
+        <section class="credit-option-section income-rate-section">
+          <h3>Next Recipe Phase Income</h3>
+          <p class="income-breakdown">${level.credits} base + satisfied outputs</p>
+          <div class="income-bonus-list">
+            ${incomeBonusControlMarkup("Satisfied Optional Outputs", "optionalOutputs", campaign.incomeBonuses.optionalOutputs, level.bonusOutputs.length)}
+            ${incomeBonusControlMarkup("Satisfied Objective Outputs", "objectiveOutputs", campaign.incomeBonuses.objectiveOutputs, level.objective.length)}
           </div>
         </section>
 
         <section class="credit-option-section">
-          <h3>Spend Credits</h3>
+          <h3>${phase.label} Credit Actions</h3>
           <div class="credit-action-list credit-spend-actions">
-            ${CREDIT_SPEND_ACTIONS.map((action) => creditActionMarkup(action, "spend")).join("")}
+            ${spendActions.length
+              ? spendActions.map(creditActionMarkup).join("")
+              : `<p class="no-credit-actions">No Credit spending actions during Clean Up.</p>`}
           </div>
         </section>
       </div>
@@ -226,11 +281,24 @@ function creditTrackerMarkup(level) {
 }
 
 function updateCreditDisplays() {
+  const level = LEVELS[campaign.levelId];
   document.querySelectorAll("[data-credit-balance]").forEach((element) => {
     element.textContent = campaign.credits;
   });
+  document.querySelectorAll("[data-credit-rate]").forEach((element) => {
+    element.textContent = `+${roundIncome(level)}`;
+  });
+  document.querySelectorAll("[data-bonus-count]").forEach((element) => {
+    element.textContent = campaign.incomeBonuses[element.dataset.bonusCount];
+  });
   document.querySelectorAll("[data-credit-cost]").forEach((button) => {
     button.disabled = campaign.credits < Number(button.dataset.creditCost);
+  });
+  document.querySelectorAll('[data-action="adjust-income-bonus"]').forEach((button) => {
+    const type = button.dataset.bonusType;
+    const value = campaign.incomeBonuses[type];
+    const maximum = type === "optionalOutputs" ? level.bonusOutputs.length : level.objective.length;
+    button.disabled = Number(button.dataset.delta) < 0 ? value === 0 : value >= maximum;
   });
   const history = document.querySelector("[data-credit-history]");
   if (history) history.innerHTML = creditHistoryMarkup();
@@ -250,55 +318,43 @@ function quickRulesDialogMarkup() {
     <dialog class="rules-dialog" id="quick-rules-dialog" aria-labelledby="quick-rules-title">
       <div class="dialog-shell">
         <header class="dialog-header">
-          <h2 id="quick-rules-title">Quick Rules</h2>
+          <h2 id="quick-rules-title">Order of Play</h2>
           <button class="text-button neutral-text-button" type="button" data-action="close-quick-rules">Close</button>
         </header>
 
         <div class="dialog-body">
           <section class="quick-section">
-            <h3>Round Sequence</h3>
+            <p class="round-definition">A Round contains all four phases. The Round advances only after Clean Up.</p>
             <div class="phase-grid">
               <article class="phase-card">
                 <h4>1. Recipe Phase</h4>
                 <ul>
-                  <li>Receive the Credits listed for the Level.</li>
-                  <li>Receive additional Credits from satisfied Output Markers and 1 additional Credit from each satisfied Level Objective Output. Neither requires the Factory to be “Switched on”.</li>
-                  <li>Reveal Markers from the Marker Deck until 2 are face-up.</li>
-                  <li>Purchase a Marker for 2 Credits, or Reserve one Marker for free.</li>
-                  <li>You may only Reserve one Marker at a time. It is not affected by revealing new Markers, and you may discard it at any time during the Recipe Phase.</li>
-                  <li>Spend 2 Credits to discard the 2 revealed Markers and reveal the next 2. If the Marker Deck is empty, shuffle the Marker Discard pile to replenish it.</li>
+                  <li>Discard any Revealed Recipes. You cannot purchase them.</li>
+                  <li>Reveal the top 2 Recipes.</li>
+                  <li>Purchase any number of Recipes for 2 Credits each.</li>
                 </ul>
               </article>
               <article class="phase-card">
                 <h4>2. Build Phase</h4>
                 <ul>
-                  <li>You MUST Place a Purchased Recipe or Output Marker. This does NOT cost Credits.</li>
-                  <li>You MAY Pay 2 Credits to place a Reserved Marker.</li>
-                  <li>Pay 1 Credit to move an already Placed Marker.</li>
-                  <li>Pay 2 Credits to Swap 2 Recipe Markers.</li>
-                  <li>Freely Rotate Recipe and Output Markers.</li>
-                  <li>Recipes do NOT have to be adjacent, but WILL need conveyor connections to function.</li>
+                  <li>Place up to 2 Purchased Recipes on any Game Board Tile.</li>
+                  <li>Pay 1 Credit to Move a placed Recipe.</li>
+                  <li>Pay 2 Credits to Swap Recipes.</li>
                 </ul>
               </article>
               <article class="phase-card">
                 <h4>3. Conveyor Phase</h4>
                 <ul>
-                  <li>Place Conveyors to connect required Recipe Inputs and Outputs.</li>
-                  <li>Pay 1 Credit for the Round to alter EXISTING Conveyors freely.</li>
-                  <li>Any number of Straight Conveyors are free when they form one uninterrupted straight line.</li>
-                  <li>Curved and Split Conveyors cost 1 Credit each.</li>
-                  <li>Conveyors may cross as a bridge but may never share the same lane.</li>
-                  <li>DOUBLE the required Input Resources to DOUBLE a Recipe's Outputs. Triple and quadruple requirements only produce double Outputs.</li>
+                  <li>Place a straight, uninterrupted line of Conveyors for free.</li>
+                  <li>Pay 1 Credit to place a Curved or Split Conveyor.</li>
+                  <li>Pay 1 Credit to alter existing Conveyors for the Round.</li>
                 </ul>
               </article>
               <article class="phase-card">
                 <h4>4. Clean Up</h4>
                 <ul>
-                  <li>Return spent Credits to the supply.</li>
-                  <li>Advance the Round Counter.</li>
-                  <li>If the Round Counter reaches zero, you lose the current Level.</li>
-                  <li>If the Round Counter is Above 0 and all Objective Outputs are satisfied, "Switch on" the Factory and win the Level.</li>
-                  <li>If the Round Counter is above zero, return to the Recipe Phase.</li>
+                  <li>If the Objective Outputs are satisfied, Switch On the Factory.</li>
+                  <li>Select New Round and return to the Recipe Phase.</li>
                 </ul>
               </article>
             </div>
@@ -307,24 +363,23 @@ function quickRulesDialogMarkup() {
           <section class="quick-section">
             <h3>Credit Reference</h3>
             <div class="cost-grid">
-              <span>Purchase a Marker</span><strong>2 Credits</strong>
-              <span>Discard the 2 revealed Markers and reveal the next 2</span><strong>2 Credits</strong>
-              <span>Place a Reserved Marker</span><strong>2 Credits</strong>
-              <span>Move a Placed Marker</span><strong>1 Credit</strong>
-              <span>Swap 2 Recipe Markers</span><strong>2 Credits</strong>
+              <span>Purchase a Recipe</span><strong>2 Credits</strong>
+              <span>Discard the 2 Revealed Recipes and reveal the next 2</span><strong>2 Credits</strong>
+              <span>Move a placed Recipe</span><strong>1 Credit</strong>
+              <span>Swap 2 Recipes</span><strong>2 Credits</strong>
               <span>Alter existing Conveyors for the Round</span><strong>1 Credit</strong>
               <span>Place a Curved or Split Conveyor</span><strong>1 Credit each</strong>
               <span>Place uninterrupted Straight Conveyors</span><strong>Free</strong>
-              <span>Rotate Recipe or Output Markers</span><strong>Free</strong>
+              <span>Rotate Recipes</span><strong>Free</strong>
             </div>
           </section>
 
           <section class="quick-section quick-notes">
             <h3>Level Check</h3>
             <ul>
-              <li>All recipes activate simultaneously and Receive their Inputs and Produce their Outputs.</li>
+              <li>All Recipes activate simultaneously and Receive their Inputs and Produce their Outputs.</li>
               <li>All Resources are simultaneously transported along the Conveyor network.</li>
-              <li>Satisfying Placed Output Markers is OPTIONAL for Completing the Level.</li>
+              <li>Satisfying Optional Outputs is not required to complete the Level.</li>
               <li>Producing more than the required Objective Outputs will still satisfy the Level.</li>
             </ul>
           </section>
@@ -341,7 +396,7 @@ function quickRulesDialogMarkup() {
 function rulesAccessMarkup() {
   return `
     <div class="rules-access" aria-label="Rules">
-      <button class="button" type="button" data-action="open-quick-rules">Quick Rules</button>
+      <button class="button" type="button" data-action="open-quick-rules">Order of Play</button>
       <button class="button" type="button" data-action="open-rulebook">Full Rule Book</button>
     </div>
   `;
@@ -382,6 +437,107 @@ function bonusOutputMarkup(level) {
   `).join("");
 }
 
+function phaseProgressMarkup() {
+  const activeIndex = PHASES.findIndex((phase) => phase.id === campaign.phase);
+  return `
+    <ol class="phase-progress" aria-label="Round phases">
+      ${PHASES.map((phase, index) => `
+        <li class="${index === activeIndex ? "is-current" : ""} ${index < activeIndex ? "is-complete" : ""}" ${index === activeIndex ? 'aria-current="step"' : ""}>
+          <span>${index + 1}</span>${phase.label}
+        </li>
+      `).join("")}
+    </ol>
+  `;
+}
+
+function phaseInstructions(levelId, phaseId) {
+  const tutorial = levelId === "L0";
+  const instructions = {
+    recipe: tutorial ? [
+      "Receive this Round's Credits. The Digital Portal adds them automatically.",
+      "Discard any Recipes left revealed from the previous Round; they cannot be purchased.",
+      "Reveal the top 2 Recipes. You may purchase any number for 2 Credits each, or purchase none. You may hold up to 2 Purchased Recipes.",
+      "You may spend 2 Credits to discard both Revealed Recipes and reveal the next 2. When the Recipe Deck is empty, return the discard pile face-down in order without shuffling."
+    ] : [
+      "Discard any Recipes left revealed from the previous Round; they cannot be purchased.",
+      "Reveal the top 2 Recipes. Purchase any number for 2 Credits each, or purchase none.",
+      "When the Recipe Deck is empty, return the discard pile face-down in order without shuffling."
+    ],
+    build: tutorial ? [
+      "Place up to 2 Purchased Recipes on empty Game Board Tiles in any orientation. Placing them is free.",
+      "Recipes do not need to be adjacent, but they need Conveyor connections to function.",
+      "Pay 1 Credit to move a placed Recipe or 2 Credits to swap 2 Recipes. Rotate Recipes freely."
+    ] : [
+      "Place up to 2 Purchased Recipes on empty Game Board Tiles in any orientation.",
+      "Pay 1 Credit to move a placed Recipe or 2 Credits to swap 2 Recipes. Rotate Recipes freely."
+    ],
+    conveyor: tutorial ? [
+      "Use Conveyors to connect an Input Marker to each required Recipe Input, then connect Recipe Outputs to another Recipe, an Optional Output, or an Objective Output.",
+      "Place a straight, uninterrupted Conveyor line for free. Curved and Split Conveyors cost 1 Credit each.",
+      "Pay 1 Credit to alter existing Conveyors freely for this Round. Conveyors remain on the Board until altered or removed."
+    ] : [
+      "Connect required Recipe Inputs and Outputs with Conveyors.",
+      "Straight, uninterrupted lines are free. Curved or Split Conveyors cost 1 Credit each. Pay 1 Credit to alter existing Conveyors for this Round."
+    ],
+    cleanup: tutorial ? [
+      "Check whether every Objective Output shown above is produced and connected to an Objective Output Tile.",
+      "If the Objective Outputs are satisfied, select Objective Complete to Switch On the Factory.",
+      "Otherwise select New Round. The Digital Portal advances the Round and returns to the Recipe Phase."
+    ] : [
+      "If every Objective Output is produced and connected to an Objective Output Tile, select Objective Complete.",
+      "Otherwise select New Round to advance the Round and return to the Recipe Phase."
+    ]
+  };
+  return instructions[phaseId];
+}
+
+function phaseGuideMarkup() {
+  const phase = currentPhase();
+  return `
+    <section class="phase-guide" aria-labelledby="current-phase-title">
+      ${phaseProgressMarkup()}
+      <div class="phase-guide-body">
+        <div>
+          <p class="label">Current Phase</p>
+          <h2 id="current-phase-title">${phase.label}</h2>
+        </div>
+        <ul>${phaseInstructions(campaign.levelId, phase.id).map((instruction) => `<li>${instruction}</li>`).join("")}</ul>
+      </div>
+    </section>
+  `;
+}
+
+function levelMechanicDialogMarkup() {
+  if (!["L2A", "L2B"].includes(campaign.levelId)) return "";
+  return `
+    <dialog class="rules-dialog mechanic-dialog" id="level-mechanic-dialog" aria-labelledby="level-mechanic-title">
+      <div class="dialog-shell">
+        <header class="dialog-header">
+          <div>
+            <p class="label">New Mechanic</p>
+            <h2 id="level-mechanic-title">Double Recipe Outputs</h2>
+          </div>
+          <button class="text-button neutral-text-button" type="button" data-action="close-level-mechanic">Close</button>
+        </header>
+        <div class="dialog-body">
+          <p>Using Conveyors to connect DOUBLE the required Input Resources for a Recipe will DOUBLE the Outputs of the Recipe.</p>
+          <p>This does not apply to triple or quadruple Input Recipe Requirements, which will only produce double outputs.</p>
+          <p><strong>Example:</strong> 2 Iron = 2 Coal. Providing 4 Iron will Produce 4 Coal. Providing 6 Iron continues to Produce 4 Coal.</p>
+        </div>
+        <footer class="dialog-footer">
+          <button class="button button-primary" type="button" data-action="close-level-mechanic">Got It</button>
+        </footer>
+      </div>
+    </dialog>
+  `;
+}
+
+function showLevelMechanicIfNeeded() {
+  if (!["L2A", "L2B"].includes(campaign.levelId)) return;
+  if (campaign.seenMechanics.includes("double-recipe-outputs")) return;
+  requestAnimationFrame(() => document.querySelector("#level-mechanic-dialog")?.showModal());
+}
+
 function levelIndexMarkup() {
   return Object.values(LEVELS).map((level) => `
     <details class="level-index-entry">
@@ -395,7 +551,7 @@ function levelIndexMarkup() {
         <ul>${level.objective.map(([resource, amount]) => `<li>${amount} ${resource}</li>`).join("")}</ul>
         <h4>INPUTS</h4>
         <ul>${level.inputs.map(([name, amount]) => `<li>${amount} ${name}</li>`).join("")}</ul>
-        <h4>OUTPUTS (Not OBJECTIVES)</h4>
+        <h4>OPTIONAL OUTPUTS</h4>
         <ul>${level.bonusOutputs.length ? level.bonusOutputs.map(([requirement, reward]) => `<li>${requirement} = ${reward}</li>`).join("") : "<li>NONE</li>"}</ul>
       </div>
     </details>
@@ -447,7 +603,7 @@ function renderLevel() {
           ${level.difficulty ? `<p class="label">${level.difficulty}</p>` : ""}
           <h1>${level.label}</h1>
         </div>
-        <button class="button compact-button" type="button" data-action="open-quick-rules">Quick Rules</button>
+        <button class="button compact-button" type="button" data-action="open-quick-rules">Order of Play</button>
       </header>
 
       <section class="level-summary" aria-label="Level summary">
@@ -459,11 +615,15 @@ function renderLevel() {
             <h2>Round</h2>
             <strong role="status" aria-live="polite">${roundText(level)}</strong>
           </div>
+          <div class="summary-block">
+            <h2>Phase</h2>
+            <strong>${currentPhase().label}</strong>
+          </div>
           <div class="summary-block credit-summary-block">
             <h2>Credits</h2>
             <div class="credit-summary-content">
               <strong data-credit-balance>${campaign.credits}</strong>
-              <span>+${level.credits} / Round</span>
+              <span><span data-credit-rate>+${roundIncome(level)}</span> / Round</span>
             </div>
         </div>
       </section>
@@ -476,21 +636,27 @@ function renderLevel() {
       ` : ""}
 
         <div class="level-controls">
-          <button class="button button-primary" type="button" data-action="next-round">Next Round</button>
-          <button class="button button-success" type="button" data-action="objective-complete">Objective Complete</button>
+          <button class="button button-primary" type="button" data-action="next-phase">${campaign.phase === "cleanup" ? "New Round" : "Next Phase"}</button>
+          <button class="button button-success" type="button" data-action="objective-complete" ${campaign.phase === "cleanup" ? "" : 'disabled title="Complete the Objective during Clean Up"'}>Objective Complete</button>
         </div>
 
-      <p class="marker-deck-reminder">Reveal Markers from the Marker Deck until 2 are face-up.</p>
+      ${phaseGuideMarkup()}
 
-      <div class="level-columns">
+      <div class="level-materials-heading">
+        <p class="label">Level Setup</p>
+        <p>Set out the Inputs and Optional Outputs shown below. Keep the Recipe Deck face-down.</p>
+      </div>
+
+      <div class="level-columns" aria-label="Level setup materials">
         <section class="level-column">
           <h2>Input Markers</h2>
           <ul class="plain-list">${inputMarkup(level)}</ul>
         </section>
 
         <section class="level-column">
-          <h2>Output Markers <span>(Optional)</span></h2>
+          <h2>Optional Outputs</h2>
           <ul class="plain-list output-marker-list">${bonusOutputMarkup(level)}</ul>
+          ${level.bonusOutputs.length ? `<p class="placement-note">Place these Optional Outputs on the Game Board during setup.</p>` : ""}
         </section>
       </div>
 
@@ -501,8 +667,10 @@ function renderLevel() {
       </div>
     </div>
     ${quickRulesDialogMarkup()}
+    ${levelMechanicDialogMarkup()}
   `;
   focusPage();
+  showLevelMechanicIfNeeded();
 }
 
 function branchChoiceText(targetLevel) {
@@ -596,37 +764,35 @@ function renderRulebook() {
         <a href="#overview">Overview</a>
         <a href="#setup">Setup</a>
         <a href="#winning">Winning</a>
-        <a href="#rounds">Playing a Round</a>
+        <a href="#rounds">Order of Play</a>
         <a href="#indexes">Indexes</a>
       </nav>
 
       <section class="rulebook-section" id="components">
         <h2>Components:</h2>
         <h3>Game Board:</h3>
-        <p>A 6x6 grid containing the Round Counter, 4 Input Tiles and 4 Output Tiles.</p>
+        <p>A 6x6 grid containing the Round Counter, 4 marked Input Tiles and 2 marked Output Tiles.</p>
         <h3>Markers:</h3>
-        <p>3 Decks consisting of</p>
-        <div class="marker-type-grid" aria-label="Marker decks">
-          <strong>Input Markers</strong>
-          <strong>Recipe Markers</strong>
-          <strong>Output Markers</strong>
+        <p>There are 4 Types of Markers that are Placed on the Game Board:</p>
+        <div class="marker-type-grid" aria-label="Marker types">
+          <strong>Inputs</strong>
+          <strong>Recipes</strong>
+          <strong>Optional Outputs</strong>
+          <strong>Objective Outputs</strong>
         </div>
         <ul>
           <li>Input Markers provide their listed Resources and are placed on Input Tiles.</li>
           <li>Recipe Markers use Provided Resources to Create new Resources.</li>
-          <li>Output Markers consume their Input Resources and provide additional Credits each Recipe Phase while they remain satisfied.
+          <li>Optional Outputs consume their Input Resources and provide additional Credits each Recipe Phase while they remain satisfied.
             <ul>
-              <li>Output Markers do NOT need to be placed on Output Tiles. Output Tiles are for a Level's Objective Outputs.</li>
-              <li>A satisfied Output Marker will provide additional Credits even if the factory is not “Switched on”</li>
+              <li>Optional Outputs do NOT need to be placed on Output Tiles. Output Tiles are for a Level's Objective Outputs.</li>
+              <li>A satisfied Optional Output will provide additional Credits even if the factory is not “Switched on”.</li>
             </ul>
           </li>
-          <li>Provide a Level's Objective Outputs to an Output Tile to complete a level.</li>
+          <li>Provide a Level's Objective Outputs to an Objective Output Tile to complete a level.</li>
         </ul>
         <h3>Conveyors:</h3>
-        <p>30x straight, 30x split, 30x curved Conveyor Tokens connect Input, Recipe and Output Markers to each other and to Objective Output Tiles.</p>
-        <h3>Credit Tokens:</h3>
-        <p>26 Credit Tokens representing 1 Credit each.</p>
-        <p class="site-note portal-note">The Digital Portal can track the current Credit total during each Level.</p>
+        <p>30x straight, 30x split, 30x curved Conveyor Tokens connect Inputs, Recipes, Optional Outputs and Objective Outputs.</p>
         <h3>Digital Portal:</h3>
         <p><a href="https://nkhitrykh.github.io/felix-producto/">https://nkhitrykh.github.io/felix-producto/</a></p>
         <p class="site-note portal-note">The Digital Portal is required to play Felix Producto.</p>
@@ -635,6 +801,7 @@ function renderRulebook() {
       <section class="rulebook-section" id="overview">
         <h2>Game Overview:</h2>
         <p>Each level, your objective is to produce the required resources within the time constraint. The game is played in rounds, and each round consists of 4 phases: the Recipe Phase, the Build Phase, the Conveyor Phase, and the Clean Up Phase.</p>
+        <p>In the Recipe Phase, you will Reveal and Purchase new and unique Recipes to manipulate Resources. In the Build Phase, you will plan out your Factory Floor and Connect it in the Conveyor Phase. The Clean Up Phase advances the Time Limit of the Game.</p>
         <p>Each level has a set Round limit in which you must arrange Recipes and Conveyors to develop the production line. Once the line is complete, you will “Switch on” the Factory and complete the level! (Yes, that means Recipes will only start to produce after "Switch on”, so just follow the Input/Output numbers as you build the Factory)</p>
         <p>Between each level, the Digital Portal provides narrative decisions and setup directions for the next level.</p>
       </section>
@@ -643,16 +810,15 @@ function renderRulebook() {
         <h2>Game Setup:</h2>
         <ol>
           <li>Place the Game Board in the center of the table, aligning each side to make a 6x6 grid with the marked INPUT Tiles in the top-left Corner, and the OUTPUT Tiles on the bottom-center.</li>
-          <li>Place the designated Input Markers for the level on their designated Input Tiles of the Game Board (see Digital Portal or Level Index). Set unused Input Markers aside, you will not need these for the current level.</li>
-          <li>Take the assigned Recipe Markers out of the Recipe Deck (see Digital Portal or Level Index). Set unused Recipe Markers aside, you will not need these for the current level.</li>
-          <li>Take the assigned Output Markers out of the Output Deck (see Digital Portal or Level Index). Set unused Output Markers aside, you will not need these for the current level.</li>
-          <li>Shuffle the assigned Recipe and Output Markers together and place them face down on the table, this is the Marker Deck.</li>
+          <li>Place the designated Inputs for the Level on their designated Input Tiles of the Game Board (see Digital Portal or Level Index). Set unused Input Markers aside, you will not need these for the current level.</li>
+          <li>Take the designated Recipes for the Level and Shuffle them, placing them Face Down on the Table (see Digital Portal or Level Index). Set unused Recipe Markers aside, you will not need these for the current level.</li>
+          <li>Take any designated Optional Outputs and Place them on their assigned Game Board Tiles (see Digital Portal or Level Index). Set unused Optional Outputs aside, you will not need these for the current level.</li>
         </ol>
       </section>
 
       <section class="rulebook-section" id="winning">
         <h2>Winning the Level:</h2>
-        <p>During the Clean-Up Phase, if every Objective Output is Produced and connected to a Game Board Output Tile via Conveyors, you will “Switch On” the Factory, and the Level is immediately Won! (see the Digital Portal after the completion of each Level)</p>
+        <p>During the Clean-Up Phase, if every Objective Output is Produced and connected to an Objective Output Tile via Conveyors, you will “Switch On” the Factory, and the Level is immediately Won! (see the Digital Portal after the completion of each Level)</p>
         <p class="rulebook-note-line"><strong>NOTE:</strong> All recipes activate simultaneously and will Receive their Inputs and Produce their Outputs.</p>
         <p class="rulebook-note-line"><strong>NOTE:</strong> All Resources are simultaneously transported along the Conveyor network.</p>
         <h3>Losing the Level:</h3>
@@ -662,58 +828,71 @@ function renderRulebook() {
       </section>
 
       <section class="rulebook-section" id="rounds">
-        <h2>Playing the Game:</h2>
+        <h2>Order of Play:</h2>
         <p>The Game is played in Rounds. Each round consists of 4 Phases: the Recipe Phase, Build Phase, Conveyor Phase and Clean-up Phase.</p>
+        <p>Be sure to follow any Directions in the Digital Portal.</p>
+        <div class="order-of-play-grid">
+          <article><h3>1. Recipe Phase</h3><p>Discard any Revealed Recipes; these cannot be Purchased. Reveal the Top 2 Recipes from the Recipe Deck. Purchase any number of Recipes for 2 Credits Each.</p></article>
+          <article><h3>2. Build Phase</h3><p>Place up to 2 Purchased Recipes on any Game Board Tile. Pay 1 Credit to Move a Placed Recipe. Pay 2 Credits to Swap Recipes.</p></article>
+          <article><h3>3. Conveyor Phase</h3><p>Place Conveyors in a Straight, uninterrupted Line for Free along the edges of Game Board Tiles. Pay 1 Credit to place a Curved or Split Conveyor. Pay 1 Credit to alter any EXISTING Conveyors for the Round.</p></article>
+          <article><h3>4. Clean Up Phase</h3><p>“Switch On” the Factory if all Objectives are Satisfied. Select “New Round” on the Digital Portal and return to Recipe Phase.</p></article>
+        </div>
+
+        <h2 class="phase-notes-title">Round Phase Notes:</h2>
         <div class="full-phase-grid">
           <article class="full-phase">
             <h3>1. Recipe Phase</h3>
             <ol>
               <li>Receive Credits according to the Level settings (see Index or Digital Portal).
                 <ol>
-                  <li>Receive additional Credits according to satisfied Output Markers (Output Markers placed on the Game Board that are connected to required Resource Inputs).</li>
-                  <li>Receive 1 additional Credit according to satisfied Level Objective Outputs (Resource delivered to Game Board Objective Output Tile)</li>
-                  <li>Neither of these requires the Factory to be “Switched on” to grant the additional Credits.</li>
+                  <li>Receive additional Credits according to any satisfied Optional Outputs.</li>
+                  <li>Receive 1 additional Credit according to satisfied Level Objective Outputs.</li>
+                  <li>Neither of these require the Factory to be “Switched on” to grant the additional Credits.</li>
+                  <li>Select these Options on the Digital Portal as completed.</li>
                 </ol>
               </li>
-              <li>Reveal Markers from the Marker Deck until 2 are face-up. (Skip this step if 2 Markers are already revealed, see Recipe Phase D for further options)</li>
-              <li>You may Purchase or Reserve a Marker from the 2 revealed Recipe Markers.
+              <li>Reveal the Top 2 Recipes from the Recipe Deck.
                 <ol>
-                  <li>If you Purchase a Marker, pay 2 Credits immediately. You will NOT need to pay Credits to Place this Marker on the Game Board in the Build Phase.</li>
-                  <li>You may only Reserve one Marker at a time. This Marker will not be affected by revealing new Markers (see below).
-                    <ol><li>You may choose to discard this Marker at any time during the Recipe Phase.</li></ol>
-                  </li>
-                  <li>Reserving a Marker does NOT cost any Credits, but you will need to pay Credits to Place the Marker on the Game Board in the Build Phase.</li>
+                  <li>If there are already Revealed Recipes, Discard these. When the Recipe Deck is empty, Place the Discard Pile in order Face Down to refill the Recipe Deck.</li>
+                  <li>Discarded Recipes CANNOT be Purchased.</li>
                 </ol>
               </li>
-              <li>You may spend 2 Credits to take the 2 revealed Markers and Discard them, Revealing the next top 2 Markers from the face-down Marker Deck.
-                <ol><li>If at any time the Marker Deck is empty, Shuffle the Marker Discard pile and place it face down on the table to replenish the Deck.</li></ol>
+              <li>You may Purchase Recipes from the revealed Recipe Pool.
+                <ol>
+                  <li>If you Purchase a Recipe, pay 2 Credits immediately. You will NOT need to pay Credits to Place this Marker on the Game Board in the Build Phase.</li>
+                  <li>You may only hold two Recipes at a time. In order to buy more Recipes you must Place Recipes in the Build Phase.</li>
+                </ol>
+              </li>
+              <li>You may spend 2 Credits to take the 2 revealed Recipes and Discard them, Revealing the next top 2 Recipes from the face-down Recipe Deck.
+                <ol>
+                  <li>When the Recipe Deck is empty, Place the Discard Pile in order Face Down to refill the Recipe Deck.</li>
+                  <li>If there is only 1 Recipe Revealed, you may NOT perform this action.</li>
+                </ol>
               </li>
             </ol>
           </article>
           <article class="full-phase">
             <h3>2. Build Phase</h3>
             <ol>
-              <li>You MUST Place a Purchased Recipe or Output Marker on ANY empty Game Board Tile in ANY orientation.
+              <li>You may Place up to 2 Purchased Recipes on ANY empty Game Board Tile in ANY orientation.
                 <ol><li>This does NOT cost Credits as the Marker has already been Purchased.</li></ol>
               </li>
-              <li>You MAY Pay 2 Credits to place a Reserved Marker on ANY empty Game Board Tile in ANY orientation.</li>
               <li>Recipes do NOT have to be adjacent to each other, but WILL need conveyor connections to function.</li>
               <li>You may Pay 1 Credit to move an already Placed Marker.</li>
               <li>You may Pay 2 Credits to Swap the positions of 2 Recipe Markers.
-                <ol><li>You may freely Rotate the Orientation of a Recipe or Output Marker at any time during the Build Phase.</li></ol>
+                <ol><li>You may freely Rotate the Orientation of a Recipe at any time during the Build Phase.</li></ol>
               </li>
             </ol>
           </article>
           <article class="full-phase">
             <h3>3. Conveyor Phase</h3>
             <ol>
-              <li>Place Conveyors to connect the required Recipe Inputs and Recipe Outputs to other Recipe or Output Markers.</li>
+              <li>Place Conveyors to connect required Recipe Inputs and Recipe Outputs to Recipes, Optional Outputs and Objective Outputs.</li>
               <li>Conveyors exist along the edges of Game Board Tiles and remain on the Board until you decide to alter their path or remove them.</li>
               <li>Rotating, Moving, Replacing or Removing Conveyors costs 1 Credit for the Round (1 Credit allows you to alter EXISTING Conveyors freely for the entire Round)</li>
               <li>Any number of Straight Conveyors may be Placed for free, provided they form one uninterrupted straight line.</li>
               <li>Placing a Curved or Split Conveyor costs 1 Credit per Conveyor placed.</li>
               <li>Conveyors may cross each other as a bridge but may never share the same lane (edge of a Game Board Tile).</li>
-              <li>Be mindful of any Resource Restrictions or Interactions (see Resource Notes under INDEXES).</li>
               <li>Using conveyors to connect DOUBLE the required Input Resources for a Recipe will DOUBLE the Outputs of the Recipe. This does not apply to triple or quadruple Input Recipe Requirements, which will only produce double outputs.
                 <ol><li>Ie. 2 Iron = 2 Coal: Providing 4 Iron will Produce 4 Coal. Providing 6 Iron continues to Produce 4 Coal.</li></ol>
               </li>
@@ -722,17 +901,15 @@ function renderRulebook() {
           <article class="full-phase">
             <h3>4. Clean Up</h3>
             <ol>
-              <li>Return all spent Credits to the supply (if not done so already)</li>
-              <li>Advance the Round Counter on the Game Board one space.
-                <ol><li>If the Round Counter ever reaches zero, you lose the current level.</li></ol>
-              </li>
               <li>If the Round Counter is Above 0 and all Objective Outputs have been satisfied, you will “Switch on” the Factory and win the Level!
                 <ol>
-                  <li>Satisfying any Placed Output Markers is OPTIONAL for Completing the Level</li>
+                  <li>Satisfying any Optional Outputs is NOT required to Complete the Level.</li>
                   <li>Producing more than the required Objective Outputs will still satisfy the Level (ie. 3 Steel will complete the objective of 2 Steel)</li>
                 </ol>
               </li>
-              <li>If the Round Counter is above zero, return to the Recipe Phase.</li>
+              <li>Select “New Round” on the Digital Portal.
+                <ol><li>If the Round Counter ever reaches zero, you lose the current level.</li></ol>
+              </li>
             </ol>
           </article>
         </div>
@@ -798,6 +975,10 @@ function advanceToLevel(levelId) {
 
 document.addEventListener("click", (event) => {
   if (event.target.matches?.(".rules-dialog")) {
+    if (event.target.id === "level-mechanic-dialog") {
+      campaign.seenMechanics = [...new Set([...campaign.seenMechanics, "double-recipe-outputs"])];
+      saveCampaign();
+    }
     event.target.close();
     return;
   }
@@ -814,9 +995,25 @@ document.addEventListener("click", (event) => {
     document.querySelector("#quick-rules-dialog")?.close();
   }
 
+  if (action === "close-level-mechanic") {
+    campaign.seenMechanics = [...new Set([...campaign.seenMechanics, "double-recipe-outputs"])];
+    saveCampaign();
+    document.querySelector("#level-mechanic-dialog")?.close();
+  }
+
   if (action === "credit-change") {
     const amount = Number(button.dataset.amount);
     if (recordCreditTransaction(button.dataset.label, amount)) updateCreditDisplays();
+  }
+
+  if (action === "adjust-income-bonus") {
+    const level = LEVELS[campaign.levelId];
+    const type = button.dataset.bonusType;
+    const maximum = type === "optionalOutputs" ? level.bonusOutputs.length : level.objective.length;
+    const nextValue = campaign.incomeBonuses[type] + Number(button.dataset.delta);
+    campaign.incomeBonuses[type] = Math.min(maximum, Math.max(0, nextValue));
+    saveCampaign();
+    updateCreditDisplays();
   }
 
   if (action === "undo-credit" && campaign.creditHistory.length) {
@@ -853,20 +1050,26 @@ document.addEventListener("click", (event) => {
     renderLevel();
   }
 
-  if (action === "next-round") {
+  if (action === "next-phase") {
     const level = LEVELS[campaign.levelId];
-    if (level.roundLimit && campaign.round >= level.roundLimit) {
+    const phaseIndex = PHASES.findIndex((phase) => phase.id === campaign.phase);
+    if (phaseIndex < PHASES.length - 1) {
+      campaign.phase = PHASES[phaseIndex + 1].id;
+      saveCampaign();
+      renderLevel();
+    } else if (level.roundLimit && campaign.round >= level.roundLimit) {
       campaign.screen = "failed";
       saveCampaign();
       renderFailed();
     } else {
       campaign.round += 1;
-      recordCreditTransaction(`Round ${campaign.round} income`, level.credits);
+      campaign.phase = "recipe";
+      recordCreditTransaction(`Round ${campaign.round} income`, roundIncome(level));
       renderLevel();
     }
   }
 
-  if (action === "objective-complete") {
+  if (action === "objective-complete" && campaign.phase === "cleanup") {
     const level = LEVELS[campaign.levelId];
     if (level.next.length > 0) {
       campaign.screen = "branch";

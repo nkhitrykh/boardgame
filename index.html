@@ -3,14 +3,110 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Digital rule book, quick reference, level guide, and round tracker for Felix Producto.">
-  <meta name="theme-color" content="#202020">
+  <meta name="theme-color" content="#22223b">
+  <meta name="description" content="The digital portal for the Felix Producto board game.">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Felix Producto</title>
-  <link rel="stylesheet" href="style.css?v=20260806.2">
+  <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Oxanium:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=8.8.20">
+  <script src="app.js?v=8.8.20" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#app">Skip to content</a>
-  <main id="app" tabindex="-1"></main>
-  <script src="app.js?v=20260806.2"></script>
+
+  <div class="site-shell">
+    <header class="site-header">
+      <button class="brand-button" type="button" data-action="home" aria-label="Felix Producto home">
+        <span>Felix Producto</span>
+      </button>
+
+      <nav class="site-actions" id="site-actions" aria-label="Page controls" hidden>
+        <button class="text-button" type="button" data-action="quick-rules">Quick Actions</button>
+        <button class="text-button" type="button" data-action="home">Home</button>
+      </nav>
+    </header>
+
+    <main id="app" tabindex="-1"></main>
+  </div>
+
+  <dialog class="rules-dialog" id="quick-rules-dialog" aria-labelledby="quick-rules-title">
+    <div class="dialog-surface">
+      <header class="dialog-header">
+        <div>
+          <p class="eyebrow">Quick Reference</p>
+          <h1 id="quick-rules-title">Actions</h1>
+        </div>
+        <button class="icon-button" type="button" data-action="close-rules" aria-label="Close quick actions">×</button>
+      </header>
+
+      <p class="dialog-intro">Take any Action at any time if you can pay its Credit cost.</p>
+
+      <div class="action-reference">
+        <section class="action-section">
+          <h2>Recipes</h2>
+          <dl class="cost-list">
+            <div>
+              <dt>Purchase the Top Recipe</dt>
+              <dd>Cost labeled on Recipe</dd>
+            </div>
+          </dl>
+          <ul>
+            <li>Pay immediately; put the Recipe in Storage.</li>
+            <li>Storage holds 1 Recipe. Place it before purchasing another.</li>
+          </ul>
+        </section>
+
+        <section class="action-section">
+          <h2>Building</h2>
+          <dl class="cost-list">
+            <div><dt>Move a placed Recipe</dt><dd>1 Credit</dd></div>
+            <div><dt>Place Recipes from Storage</dt><dd>Free</dd></div>
+            <div><dt>Swap 2 placed Recipes</dt><dd>2 Credits</dd></div>
+            <div><dt>Rotate a placed Recipe</dt><dd>Free</dd></div>
+          </dl>
+          <ul>
+            <li>Place Recipes on any Tile, in any orientation.</li>
+            <li>Recipes need not touch, but must connect by Conveyors.</li>
+            <li>Moving an Optional Output costs 1 Credit. It pays once.</li>
+          </ul>
+        </section>
+
+        <section class="action-section">
+          <h2>Conveyors</h2>
+          <dl class="cost-list">
+            <div><dt>Place Straight Conveyors</dt><dd>Free</dd></div>
+            <div><dt>Alter an existing Straight Conveyor</dt><dd>Free</dd></div>
+            <div><dt>Place a Curved or Split Conveyor</dt><dd>1 Credit</dd></div>
+            <div><dt>Alter an existing Curved or Split Conveyor</dt><dd>Free</dd></div>
+          </dl>
+          <ul>
+            <li>Keep Conveyors on yellow Tile borders; no diagonals.</li>
+            <li>They may cross as bridges but never share a lane.</li>
+            <li>No bridges over Recipes, Inputs, Outputs, or empty Tiles.</li>
+            <li>Choose how a Split divides Resources.</li>
+          </ul>
+        </section>
+
+        <section class="action-section switch-on-section">
+          <h2>Switch On</h2>
+          <ul>
+            <li>All Recipes activate together.</li>
+            <li>All Resources move together.</li>
+            <li>Win when every Objective Output is produced and connected to its Tile.</li>
+            <li>Lose when you cannot afford an Action needed to finish.</li>
+          </ul>
+        </section>
+      </div>
+
+      <footer class="dialog-footer">
+        <button class="button button-primary" type="button" data-action="close-rules">Close</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <noscript>
+    <p class="noscript-message">Felix Producto requires JavaScript to save progress and move between Levels.</p>
+  </noscript>
 </body>
 </html>

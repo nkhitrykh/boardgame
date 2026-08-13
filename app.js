@@ -95,7 +95,7 @@ const LEVELS = [
   {
     id: "L4",
     label: "Level 4",
-    credits: 40,
+    credits: 60,
     objectives: [
       { resource: "Payload", amount: 1 },
       { resource: "Shell", amount: 1 },
@@ -267,7 +267,7 @@ function resourceMarkup(item, modifier = "") {
   return `
     <li class="resource-item ${modifier}">
       ${iconMarkup(item.resource)}
-      <span class="resource-value"><strong>${item.amount}</strong><span>${item.resource}</span></span>
+      <span class="resource-value"><strong>${item.amount}x</strong><span>${item.resource}</span></span>
     </li>
   `;
 }
@@ -287,12 +287,55 @@ function optionalOutputMarkup(level) {
       ${level.optionalOutputs.map((item) => `
         <li class="resource-item optional-output-item">
           ${iconMarkup(item.resource)}
-          <span class="resource-value"><strong>${item.amount}</strong><span>${item.resource}</span></span>
+          <span class="resource-value"><strong>${item.amount}x</strong><span>${item.resource}</span></span>
           <span class="reward-value">+${item.reward} Credits</span>
         </li>
       `).join("")}
     </ul>
     <p class="section-note">Each Optional Output pays once.</p>
+  `;
+}
+
+function proportionalRecipeNoticeMarkup(level) {
+  const levelIndex = LEVELS.findIndex((item) => item.id === level.id);
+  if (levelIndex < 2) return "";
+
+  return `
+    <aside class="recipe-output-notice" aria-labelledby="recipe-output-rule-title">
+      <div>
+        <p class="eyebrow">Recipe Rule</p>
+        <h2 id="recipe-output-rule-title">Proportional Outputs</h2>
+      </div>
+      <p><strong>2x inputs → 2x outputs.</strong> Providing a multiple of the required inputs for a Recipe will produce outputs proportionally.</p>
+    </aside>
+  `;
+}
+
+function scoreSummaryMarkup() {
+  const recordedScores = LEVELS.map((level) => ({
+    level,
+    score: Number.isInteger(activeSession.scores[level.id]) ? activeSession.scores[level.id] : null,
+  }));
+  const total = recordedScores.reduce((sum, item) => sum + (item.score ?? 0), 0);
+
+  return `
+    <section class="campaign-score-summary" aria-labelledby="campaign-score-title">
+      <div class="section-heading">
+        <h2 id="campaign-score-title">Total EVS</h2>
+      </div>
+      <dl class="level-score-list">
+        ${recordedScores.map(({ level, score }) => `
+          <div class="level-score-item ${score === null ? "unrecorded-score" : ""}">
+            <dt>${level.label}</dt>
+            <dd>${score ?? "—"}</dd>
+          </div>
+        `).join("")}
+        <div class="level-score-item total-score-item">
+          <dt>Total</dt>
+          <dd>${total}</dd>
+        </div>
+      </dl>
+    </section>
   `;
 }
 
@@ -329,10 +372,10 @@ function renderHome() {
             ${campaignSave ? `<small>${progressLabel(campaignSave)}</small>` : ""}
           </button>
           <button class="button ${campaignSave ? "button-secondary" : "button-primary"}" type="button" data-action="new-game">New Game</button>
-          <button class="button button-quiet" type="button" data-action="open-playtesting">Playtesting</button>
+          <button class="button button-quiet" type="button" data-action="open-playtesting">Level Select</button>
         </div>
 
-        <a class="rulebook-link" href="assets/rules/felix-producto-rule-book-v2.2.pdf" target="_blank" rel="noopener">
+        <a class="rulebook-link" href="assets/rules/felix-producto-rule-book-v3.0.pdf?v=3.0.1" target="_blank" rel="noopener">
           <span>Full Rule Book</span>
           <span aria-hidden="true">↗</span>
         </a>
@@ -350,7 +393,7 @@ function renderPlaytesting() {
     <section class="page-card playtest-card" aria-labelledby="playtest-title">
       <header class="page-heading centered-heading">
         <p class="eyebrow">Direct Access</p>
-        <h1 id="playtest-title">Playtesting</h1>
+        <h1 id="playtest-title">Level Select</h1>
         <p>Start at any level, play continues in order.</p>
       </header>
 
@@ -378,7 +421,7 @@ function renderLevel() {
     <article class="level-page" aria-labelledby="level-title">
       <header class="level-heading">
         <div>
-          <p class="eyebrow">${activeSession.mode === "playtest" ? "Playtesting" : "Current Job"}</p>
+          <p class="eyebrow">${activeSession.mode === "playtest" ? "Level Select" : "Current Job"}</p>
           <h1 id="level-title">${level.label}</h1>
         </div>
       </header>
@@ -390,6 +433,8 @@ function renderLevel() {
         </div>
         <ul class="resource-list objective-list">${objectiveListMarkup(level)}</ul>
       </section>
+
+      ${proportionalRecipeNoticeMarkup(level)}
 
       <div class="level-grid">
         <section class="setup-panel" aria-labelledby="inputs-title">
@@ -467,21 +512,19 @@ function renderEvsEntry() {
 function resultForCredits(credits) {
   if (credits >= 10) return "HOLY COW, uh, I mean, acceptable.";
   if (credits >= 5) return "Your work will be noted.";
-  if (credits > 0) return "Do better next time.";
-  return "You’re fired. Retry that Level.";
+  return "Do better next time.";
 }
 
 function renderResult() {
   const level = levelById(activeSession.levelId);
   const result = activeSession.result;
-  const isFailure = result.credits <= 0;
   const isLastLevel = LEVELS.findIndex((item) => item.id === level.id) === LEVELS.length - 1;
 
   currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = false;
   app.innerHTML = `
-    <section class="page-card result-card ${isFailure ? "failure-result" : ""}" aria-labelledby="result-title">
+    <section class="page-card result-card" aria-labelledby="result-title">
       <p class="eyebrow">${level.label} Evaluation</p>
       <div class="evs-score" aria-label="Employee Value Score ${result.credits}">
         <img src="assets/icons/credit-token.png" alt="" aria-hidden="true">
@@ -493,9 +536,7 @@ function renderResult() {
       <h1 id="result-title">${result.message}</h1>
 
       <div class="result-actions">
-        ${isFailure
-          ? `<button class="button button-primary" type="button" data-action="retry-level">Retry Level</button>`
-          : `<button class="button button-primary" type="button" data-action="${isLastLevel ? "open-final-narrative" : "open-narrative"}">${isLastLevel ? "Continue" : "Next Level"}</button>`}
+        <button class="button button-primary" type="button" data-action="${isLastLevel ? "open-final-narrative" : "open-narrative"}">${isLastLevel ? "Continue" : "Next Level"}</button>
       </div>
     </section>
   `;
@@ -661,6 +702,7 @@ function renderEnding() {
         <h1 id="ending-title">${escapeHtml(ending.label)}</h1>
       </header>
       <p class="ending-text">${escapeHtml(ending.text)}</p>
+      ${scoreSummaryMarkup()}
       <div class="result-actions">
         <button class="button button-primary" type="button" data-action="open-credits">Continue</button>
       </div>

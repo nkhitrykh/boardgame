@@ -9,8 +9,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Felix Producto</title>
   <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Oxanium:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=8.8.20">
-  <script src="app.js?v=8.8.20" defer></script>
+  <link rel="stylesheet" href="style.css?v=8.8.25">
+  <script src="app.js?v=8.8.25" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#app">Skip to content</a>
@@ -52,8 +52,11 @@
             </div>
           </dl>
           <ul>
-            <li>Pay immediately; put the Recipe in Storage.</li>
-            <li>Storage holds 1 Recipe. Place it before purchasing another.</li>
+            <li>Pay immediately; place the Recipe or put it in Storage.</li>
+            <li>Storage holds up to 2 Recipes.</li>
+            <li>Only Purchased Recipes in Storage or on the Game Board may be viewed.</li>
+            <li>You will not need every Recipe to complete a Level.</li>
+            <li>Providing a multiple of the required inputs for a Recipe will produce outputs proportionally.</li>
           </ul>
         </section>
 
@@ -67,8 +70,11 @@
           </dl>
           <ul>
             <li>Place Recipes on any Tile, in any orientation.</li>
-            <li>Recipes need not touch, but must connect by Conveyors.</li>
-            <li>Moving an Optional Output costs 1 Credit. It pays once.</li>
+            <li>Adjacent Recipes transfer Resources directly. Recipes that are not adjacent need Conveyor connections.</li>
+            <li>A Recipe from Storage may replace a placed Recipe for free.</li>
+            <li>Inputs stay on marked Input Tiles and cannot rotate. They may swap marked Input Tiles at any time.</li>
+            <li>Objective Outputs stay on marked Output Tiles, may rotate, and may swap marked Output Tiles at any time.</li>
+            <li>Place Optional Outputs on any Tile during Setup. They may be moved and grant their labeled Credits once.</li>
           </ul>
         </section>
 
@@ -76,15 +82,18 @@
           <h2>Conveyors</h2>
           <dl class="cost-list">
             <div><dt>Place Straight Conveyors</dt><dd>Free</dd></div>
-            <div><dt>Alter an existing Straight Conveyor</dt><dd>Free</dd></div>
+            <div><dt>Alter or move a Straight Conveyor</dt><dd>Free</dd></div>
             <div><dt>Place a Curved or Split Conveyor</dt><dd>1 Credit</dd></div>
-            <div><dt>Alter an existing Curved or Split Conveyor</dt><dd>Free</dd></div>
+            <div><dt>Rotate or move an existing Curved or Split Conveyor</dt><dd>Free</dd></div>
+            <div><dt>Remove a Curved or Split Conveyor</dt><dd>Refund 1 Credit</dd></div>
           </dl>
           <ul>
             <li>Keep Conveyors on yellow Tile borders; no diagonals.</li>
-            <li>They may cross as bridges but never share a lane.</li>
+            <li>They may cross as bridges but never share the same yellow border.</li>
             <li>No bridges over Recipes, Inputs, Outputs, or empty Tiles.</li>
-            <li>Choose how a Split divides Resources.</li>
+            <li>A Conveyor may transport more than one type of Resource.</li>
+            <li>You choose whether an adjacent Conveyor connects to an Input, Recipe or Output.</li>
+            <li>There are no merging Conveyors. Curves or Splits MAY be used to create a merger.</li>
           </ul>
         </section>
 
@@ -94,7 +103,9 @@
             <li>All Recipes activate together.</li>
             <li>All Resources move together.</li>
             <li>Win when every Objective Output is produced and connected to its Tile.</li>
-            <li>Lose when you cannot afford an Action needed to finish.</li>
+            <li>Producing more than an Objective requires still completes it.</li>
+            <li>Completing a Level with 0 Credits is still a win. Reaching 0 before completion loses the Level.</li>
+            <li>Leftover Credits determine that Level’s EVS and do not carry over.</li>
           </ul>
         </section>
       </div>

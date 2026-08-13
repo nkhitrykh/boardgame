@@ -414,6 +414,35 @@ h2 {
   color: var(--paper);
 }
 
+.recipe-output-notice {
+  display: grid;
+  margin: 18px clamp(22px, 4vw, 38px) 0;
+  padding: 18px clamp(20px, 3vw, 28px);
+  border: 2px solid var(--orange);
+  border-radius: 14px;
+  align-items: center;
+  background: var(--ink);
+  grid-template-columns: minmax(190px, 0.65fr) minmax(0, 1.35fr);
+  gap: 22px;
+}
+
+.recipe-output-notice h2,
+.recipe-output-notice p {
+  margin: 0;
+}
+
+.recipe-output-notice .eyebrow {
+  margin-bottom: 5px;
+}
+
+.recipe-output-notice > p {
+  color: rgb(249 247 247 / 82%);
+}
+
+.recipe-output-notice strong {
+  color: var(--yellow);
+}
+
 .resource-icon {
   width: 60px;
   height: 60px;
@@ -771,6 +800,65 @@ h2 {
   font-size: clamp(1.05rem, 2vw, 1.2rem);
   line-height: 1.75;
   text-align: left;
+}
+
+.campaign-score-summary {
+  max-width: 760px;
+  margin: 30px auto 0;
+  padding: 24px;
+  border: 2px solid var(--orange);
+  border-radius: 14px;
+  background: var(--ink);
+}
+
+.campaign-score-summary .section-heading {
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.campaign-score-summary h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+
+.level-score-list {
+  display: grid;
+  margin: 0;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.level-score-item {
+  display: flex;
+  min-width: 0;
+  padding: 12px 8px;
+  border: 1px solid rgb(143 144 147 / 55%);
+  border-radius: 10px;
+  flex-direction: column;
+  align-items: center;
+  background: var(--surface);
+  text-align: center;
+}
+
+.level-score-item dt {
+  color: rgb(249 247 247 / 72%);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.level-score-item dd {
+  margin: 4px 0 0;
+  color: var(--yellow);
+  font-family: "Gugi", system-ui, sans-serif;
+  font-size: 1.65rem;
+}
+
+.unrecorded-score dd {
+  color: var(--steel);
+}
+
+.total-score-item {
+  border-color: var(--yellow);
 }
 
 .credits-screen {
@@ -1136,6 +1224,13 @@ h2 {
     text-align: center;
   }
 
+  .recipe-output-notice {
+    margin: 16px 18px 0;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    text-align: center;
+  }
+
   .level-grid {
     padding: 18px;
     grid-template-columns: 1fr;
@@ -1239,6 +1334,14 @@ h2 {
 
   .ending-quote {
     padding: 18px;
+  }
+
+  .campaign-score-summary {
+    padding: 20px 16px;
+  }
+
+  .level-score-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .objective-list,

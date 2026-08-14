@@ -166,6 +166,42 @@ h2 {
   font-size: var(--title-size);
 }
 
+.intro-video-screen {
+  display: grid;
+  min-height: calc(100vh - 79px);
+  padding: 28px 20px 48px;
+  place-items: center;
+}
+
+.intro-video-card {
+  width: min(100%, 1120px, max(320px, calc(177.78dvh - 434px)));
+  padding: clamp(14px, 2.5vw, 24px);
+  border: 2px solid var(--yellow);
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.intro-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-medium);
+  background: #000;
+  object-fit: contain;
+}
+
+.intro-video-actions {
+  display: flex;
+  margin-top: 18px;
+  justify-content: center;
+}
+
+.intro-video-actions .button {
+  min-width: 180px;
+}
+
 .eyebrow {
   margin-bottom: 7px;
   color: var(--yellow);
@@ -276,10 +312,6 @@ h2 {
   border-bottom-color: currentColor;
 }
 
-.danger-text-button {
-  color: var(--orange);
-}
-
 .page-card,
 .level-page {
   width: min(100% - 32px, 1100px);
@@ -356,11 +388,6 @@ h2 {
   justify-content: space-between;
   gap: 24px;
   border-bottom: 1px solid rgb(125 127 129 / 38%);
-}
-
-.compact-button {
-  min-height: 44px;
-  padding: 9px 17px;
 }
 
 .objective-panel {
@@ -514,8 +541,7 @@ h2 {
   white-space: nowrap;
 }
 
-.section-note,
-.field-help {
+.section-note {
   margin: 15px 0 0;
   color: rgb(249 247 247 / 74%);
   font-size: 0.88rem;
@@ -706,10 +732,6 @@ h2 {
   margin-right: auto;
   margin-bottom: 0;
   margin-left: auto;
-}
-
-.failure-result {
-  border-color: var(--orange-dark);
 }
 
 .narrative-card {
@@ -1182,6 +1204,24 @@ h2 {
     padding: 24px 12px 40px;
   }
 
+  .intro-video-screen {
+    min-height: calc(100dvh - 69px);
+    padding: 18px 12px 32px;
+  }
+
+  .intro-video-card {
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .intro-video {
+    border-radius: 12px;
+  }
+
+  .intro-video-actions {
+    margin-top: 12px;
+  }
+
   .credits-screen {
     min-height: calc(100dvh - 69px);
     padding: 12px 10px;
@@ -1207,10 +1247,6 @@ h2 {
 
   .level-heading {
     padding: 24px 20px;
-  }
-
-  .desktop-quick-action {
-    display: none;
   }
 
   .objective-panel {
@@ -1423,6 +1459,31 @@ h2 {
     min-height: calc(100vh - 59px);
     padding-top: 16px;
     padding-bottom: 24px;
+  }
+
+  .intro-video-screen {
+    min-height: calc(100dvh - 59px);
+    padding: 10px 14px 14px;
+  }
+
+  .intro-video-card {
+    display: grid;
+    padding: 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .intro-video {
+    height: auto;
+  }
+
+  .intro-video-actions {
+    margin-top: 0;
+  }
+
+  .intro-video-actions .button {
+    min-width: 100px;
   }
 
   .home-card {

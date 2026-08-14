@@ -167,7 +167,6 @@ const rulesDialog = document.querySelector("#quick-rules-dialog");
 
 let campaignSave = loadSave(CAMPAIGN_SAVE_KEY, "campaign");
 let activeSession = null;
-let currentView = "home";
 let typewriterStartTimer = null;
 let typewriterTimer = null;
 let creditsReturnTimer = null;
@@ -200,7 +199,7 @@ function createSession(mode, levelId = "L0") {
     version: APP_VERSION,
     mode,
     levelId,
-    stage: "level",
+    stage: mode === "campaign" ? "intro-video" : "level",
     scores: {},
     result: null,
     ending: null,
@@ -210,8 +209,8 @@ function createSession(mode, levelId = "L0") {
 function normalizeSave(value, expectedMode) {
   if (!value || value.version !== APP_VERSION || value.mode !== expectedMode) return null;
   if (!LEVELS.some((level) => level.id === value.levelId)) return null;
-  const stage = value.stage === "intro" ? "level" : value.stage;
-  if (!["level", "evs", "result", "narrative", "final-narrative", "final-choice", "ending", "credits", "complete"].includes(stage)) return null;
+  const stage = value.stage === "intro" ? "intro-video" : value.stage;
+  if (!["intro-video", "level", "evs", "result", "narrative", "final-narrative", "final-choice", "ending", "credits", "complete"].includes(stage)) return null;
   if (expectedMode === "campaign" && stage === "complete") return null;
 
   const scores = {};
@@ -342,6 +341,7 @@ function scoreSummaryMarkup() {
 function progressLabel(session) {
   const level = levelById(session.levelId);
   const stageLabels = {
+    "intro-video": "Intro video",
     level: "In progress",
     evs: "Enter EVS",
     result: "EVS result",
@@ -358,7 +358,6 @@ function progressLabel(session) {
 
 function renderHome() {
   stopCreditsTimer();
-  currentView = "home";
   siteActions.hidden = true;
   app.innerHTML = `
     <section class="home-screen" aria-labelledby="home-title">
@@ -375,7 +374,7 @@ function renderHome() {
           <button class="button button-quiet" type="button" data-action="open-playtesting">Level Select</button>
         </div>
 
-        <a class="rulebook-link" href="assets/rules/felix-producto-rule-book-v3.0.pdf?v=3.0.1" target="_blank" rel="noopener">
+        <a class="rulebook-link" href="assets/rules/felix-producto-rules.pdf?v=clean-title" target="_blank" rel="noopener">
           <span>Full Rule Book</span>
           <span aria-hidden="true">↗</span>
         </a>
@@ -386,7 +385,6 @@ function renderHome() {
 }
 
 function renderPlaytesting() {
-  currentView = "playtesting";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = true;
   app.innerHTML = `
@@ -410,11 +408,42 @@ function renderPlaytesting() {
   focusView();
 }
 
+function renderIntroVideo() {
+  siteActions.hidden = false;
+  siteActions.querySelector('[data-action="quick-rules"]').hidden = true;
+  app.innerHTML = `
+    <section class="intro-video-screen" aria-label="Felix Producto introduction video">
+      <div class="intro-video-card">
+        <video class="intro-video" controls autoplay playsinline preload="metadata">
+          <source src="assets/video/game-intro.mp4" type="video/mp4">
+          Your browser does not support HTML video.
+        </video>
+        <div class="intro-video-actions">
+          <button class="button button-quiet" type="button" data-action="start-level">Skip</button>
+        </div>
+      </div>
+    </section>
+  `;
+  focusView();
+
+  const video = app.querySelector(".intro-video");
+  video.addEventListener("ended", () => {
+    const actionButton = app.querySelector('[data-action="start-level"]');
+    if (!actionButton) return;
+    actionButton.textContent = "Continue";
+    actionButton.classList.remove("button-quiet");
+    actionButton.classList.add("button-primary");
+    actionButton.focus();
+  }, { once: true });
+  video.play().catch(() => {
+    // Browsers may require the player to press Play before starting audio.
+  });
+}
+
 function renderLevel() {
   const level = levelById(activeSession.levelId);
   const creditsText = level.credits === null ? "Pending" : level.credits;
 
-  currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = false;
   app.innerHTML = `
@@ -480,7 +509,6 @@ function renderEvsEntry() {
   const level = levelById(activeSession.levelId);
   const creditMaximum = maximumCredits(level);
 
-  currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = false;
   app.innerHTML = `
@@ -520,7 +548,6 @@ function renderResult() {
   const result = activeSession.result;
   const isLastLevel = LEVELS.findIndex((item) => item.id === level.id) === LEVELS.length - 1;
 
-  currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = false;
   app.innerHTML = `
@@ -596,7 +623,6 @@ function renderNarrative() {
   if (!nextLevel || !narrative) return advanceLevel();
   activeNarrativeText = narrativeText(narrative);
 
-  currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = true;
   app.innerHTML = `
@@ -620,13 +646,8 @@ function renderNarrative() {
   requestAnimationFrame(() => startNarrativeTyping(activeNarrativeText));
 }
 
-function renderComplete() {
-  return renderCompleteLegacy();
-}
-
 function renderFinalNarrative() {
   activeNarrativeText = narrativeText(FINAL_NARRATIVE);
-  currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = true;
   app.innerHTML = `
@@ -649,7 +670,6 @@ function renderFinalNarrative() {
 }
 
 function renderFinalChoice() {
-  currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = true;
   app.innerHTML = `
@@ -692,7 +712,6 @@ function creditsMarkup() {
 
 function renderEnding() {
   const ending = ENDINGS[activeSession.ending] || ENDINGS.no;
-  currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = true;
   app.innerHTML = `
@@ -735,7 +754,6 @@ function completeCredits() {
 
 function renderCredits() {
   stopCreditsTimer();
-  currentView = "session";
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = true;
   app.innerHTML = `
@@ -763,8 +781,7 @@ function finishCredits() {
   creditsReturnTimer = window.setTimeout(completeCredits, CREDITS_SKIP_TITLE_DURATION);
 }
 
-function renderCompleteLegacy() {
-  currentView = "session";
+function renderComplete() {
   siteActions.hidden = false;
   siteActions.querySelector('[data-action="quick-rules"]').hidden = true;
   app.innerHTML = `
@@ -779,6 +796,7 @@ function renderCompleteLegacy() {
 
 function renderSession() {
   if (!activeSession) return renderHome();
+  if (activeSession.stage === "intro-video") return renderIntroVideo();
   if (activeSession.stage === "level") return renderLevel();
   if (activeSession.stage === "evs") return renderEvsEntry();
   if (activeSession.stage === "result") return renderResult();
@@ -810,17 +828,15 @@ function startCampaign() {
   renderSession();
 }
 
-function startPlaytest(levelId) {
-  activeSession = createSession("playtest", levelId);
+function startLevelFromIntro() {
+  if (!activeSession || activeSession.stage !== "intro-video") return;
+  activeSession.stage = "level";
   saveActiveSession();
   renderSession();
 }
 
-function restartLevel() {
-  if (!activeSession) return;
-  delete activeSession.scores[activeSession.levelId];
-  activeSession.stage = "level";
-  activeSession.result = null;
+function startPlaytest(levelId) {
+  activeSession = createSession("playtest", levelId);
   saveActiveSession();
   renderSession();
 }
@@ -877,6 +893,7 @@ function handleAction(action, button) {
   if (action === "quick-rules") return openQuickRules();
   if (action === "close-rules") return closeQuickRules();
   if (action === "new-game") return startCampaign();
+  if (action === "start-level") return startLevelFromIntro();
   if (action === "continue-game") {
     activeSession = campaignSave;
     return renderSession();
@@ -900,7 +917,6 @@ function handleAction(action, button) {
   if (action === "open-credits") return openCredits();
   if (action === "skip-credits") return finishCredits();
   if (action === "reveal-dialogue") return finishNarrativeTyping();
-  if (action === "retry-level") return restartLevel();
   if (action === "next-level") return advanceLevel();
 }
 

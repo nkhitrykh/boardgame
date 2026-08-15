@@ -218,7 +218,7 @@ h2 {
 
 .button,
 .level-picker-button,
-.rulebook-link {
+.document-link {
   min-height: 50px;
   border-radius: 12px;
   cursor: pointer;
@@ -237,7 +237,7 @@ h2 {
 
 .button:hover,
 .level-picker-button:hover,
-.rulebook-link:hover {
+.document-link:hover {
   transform: translateY(-2px);
 }
 
@@ -287,16 +287,23 @@ h2 {
   flex-wrap: wrap;
 }
 
-.rulebook-link {
-  display: flex;
+.document-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
   margin-top: 26px;
-  padding: 13px 5px;
+  padding-top: 13px;
+  border-top: 1px solid rgb(125 127 129 / 55%);
+}
+
+.document-link {
+  display: inline-flex;
+  padding: 10px 5px;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border-top: 1px solid rgb(125 127 129 / 55%);
-  border-radius: 0;
   color: var(--paper);
+  text-align: center;
 }
 
 .text-button {
@@ -1500,7 +1507,7 @@ h2 {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .rulebook-link {
+  .document-links {
     margin-top: 16px;
   }
 

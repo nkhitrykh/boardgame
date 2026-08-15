@@ -374,10 +374,16 @@ function renderHome() {
           <button class="button button-quiet" type="button" data-action="open-playtesting">Level Select</button>
         </div>
 
-        <a class="rulebook-link" href="assets/rules/felix-producto-rules.pdf?v=clean-title" target="_blank" rel="noopener">
-          <span>Full Rule Book</span>
-          <span aria-hidden="true">↗</span>
-        </a>
+        <div class="document-links" aria-label="Game documents">
+          <a class="document-link" href="assets/rules/felix-producto-rules.pdf?v=final-revised" target="_blank" rel="noopener">
+            <span>Full Rule Book</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          <a class="document-link" href="assets/print-and-play/felix-producto-print-and-play.pdf?v=with-board" target="_blank" rel="noopener">
+            <span>Print and Play</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+        </div>
       </div>
     </section>
   `;

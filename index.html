@@ -9,8 +9,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Felix Producto</title>
   <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Oxanium:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=8.8.30">
-  <script src="app.js?v=8.8.30" defer></script>
+  <link rel="stylesheet" href="style.css?v=8.8.32">
+  <script src="app.js?v=8.8.34" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#app">Skip to content</a>
@@ -47,16 +47,16 @@
           <h2>Recipes</h2>
           <dl class="cost-list">
             <div>
-              <dt>Purchase the Top Recipe</dt>
+              <dt>Purchase and Reveal the Top Recipe</dt>
               <dd>Cost labeled on Recipe</dd>
             </div>
           </dl>
           <ul>
-            <li>Pay immediately; place the Recipe or put it in Storage.</li>
+            <li>Pay and reveal it immediately; place the Recipe or put it in Storage.</li>
             <li>Storage holds up to 2 Recipes.</li>
             <li>Only Purchased Recipes in Storage or on the Game Board may be viewed.</li>
             <li>You will not need every Recipe to complete a Level.</li>
-            <li>Providing a multiple of the required inputs for a Recipe will produce outputs proportionally.</li>
+            <li>Providing a multiple of the required inputs for a Recipe will produce outputs proportionally. 2x, 3x, 4x and 5x Tokens are provided.</li>
           </ul>
         </section>
 
@@ -64,7 +64,7 @@
           <h2>Building</h2>
           <dl class="cost-list">
             <div><dt>Move a placed Recipe</dt><dd>1 Credit</dd></div>
-            <div><dt>Place Recipes from Storage</dt><dd>Free</dd></div>
+            <div><dt>Place a Purchased Recipe</dt><dd>Free</dd></div>
             <div><dt>Swap 2 placed Recipes</dt><dd>2 Credits</dd></div>
             <div><dt>Rotate a placed Recipe</dt><dd>Free</dd></div>
           </dl>
@@ -81,19 +81,18 @@
         <section class="action-section">
           <h2>Conveyors</h2>
           <dl class="cost-list">
-            <div><dt>Place Straight Conveyors</dt><dd>Free</dd></div>
-            <div><dt>Alter or move a Straight Conveyor</dt><dd>Free</dd></div>
+            <div><dt>Place or alter any number of Straight Conveyors</dt><dd>Free</dd></div>
             <div><dt>Place a Curved or Split Conveyor</dt><dd>1 Credit</dd></div>
-            <div><dt>Rotate or move an existing Curved or Split Conveyor</dt><dd>Free</dd></div>
+            <div><dt>Alter or move an existing Curved or Split Conveyor</dt><dd>Free</dd></div>
             <div><dt>Remove a Curved or Split Conveyor</dt><dd>Refund 1 Credit</dd></div>
           </dl>
           <ul>
             <li>Keep Conveyors on yellow Tile borders; no diagonals.</li>
             <li>They may cross as bridges but never share the same yellow border.</li>
-            <li>No bridges over Recipes, Inputs, Outputs, or empty Tiles.</li>
+            <li>Conveyors cannot be placed on top of Recipes, Inputs, Outputs, or empty Tiles.</li>
             <li>A Conveyor may transport more than one type of Resource.</li>
             <li>You choose whether an adjacent Conveyor connects to an Input, Recipe or Output.</li>
-            <li>There are no merging Conveyors. Curves or Splits MAY be used to create a merger.</li>
+            <li>There are no merging Conveyor pieces. Create a merge by overlapping a Curved Conveyor and an existing Straight Conveyor.</li>
           </ul>
         </section>
 
@@ -102,8 +101,8 @@
           <ul>
             <li>All Recipes activate together.</li>
             <li>All Resources move together.</li>
-            <li>Win when every Objective Output is produced and connected to its Tile.</li>
-            <li>Producing more than an Objective requires still completes it.</li>
+            <li>Win when every Objective Output is produced and connected.</li>
+            <li>Producing more than the required amount still completes the Objective.</li>
             <li>Completing a Level with 0 Credits is still a win. Reaching 0 before completion loses the Level.</li>
             <li>Leftover Credits determine that Level’s EVS and do not carry over.</li>
           </ul>
